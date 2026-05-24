@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  SUPER_ADMIN
+}
+
+model Teacher {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?
+  name         String
+  role         Role      @default(TEACHER)
+  inviteToken  String?   @unique
+  subjects     Subject[]
+  quizzes      Quiz[]
+  createdAt    DateTime  @default(now())
+}
+
+model Subject {
+  id        String  @id @default(cuid())
+  name      String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  quizzes   Quiz[]
+}
+
+model Grade {
+  id      String @id @default(cuid())
+  name    String @unique
+  quizzes Quiz[]
+}
+
+model Quiz {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  titleFr     String
+  titleEn     String?
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  grade       Grade        @relation(fields: [gradeId], references: [id])
+  gradeId     String
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  isPublished Boolean      @default(false)
+
+  // Optional preliminary activity (e.g. embedded GeoGebra) shown above the
+  // questions on the student page. All-nullable so most quizzes opt out.
+  prelimBadgeFr  String?
+  prelimBadgeEn  String?
+  prelimTitleFr  String?
+  prelimTitleEn  String?
+  prelimDescFr   String?
+  prelimDescEn   String?
+  prelimUrl      String?
+  prelimEmbedUrl String?
+
+  parts       Part[]
+  questions   Question[]
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+}
+
+model Part {
+  id         String     @id @default(cuid())
+  quiz       Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId     String
+  order      Int
+  titleFr    String
+  titleEn    String?
+  subtitleFr String?
+  subtitleEn String?
+  questions  Question[]
+
+  @@index([quizId, order])
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId        String
+  part          Part?        @relation(fields: [partId], references: [id], onDelete: SetNull)
+  partId        String?
+  order         Int
+  skillTag      String?
+  textFr        String
+  textEn        String?
+  hintFr        String?
+  hintEn        String?
+  diagramSvg    String?
+  explanationFr String
+  explanationEn String?
+  options       Option[]
+  remediation   Remediation?
+
+  // Self-relation: a follow-up question references its parent. App logic
+  // enforces a max nesting depth of 1 (no follow-up of a follow-up).
+  parent    Question?  @relation("FollowUp", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String?
+  followUps Question[] @relation("FollowUp")
+
+  answers Answer[]
+
+  @@index([quizId, order])
+}
+
+model Option {
+  id         String   @id @default(cuid())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId String
+  letter     String
+  textFr     String
+  textEn     String?
+  isCorrect  Boolean  @default(false)
+}
+
+model Remediation {
+  id            String   @id @default(cuid())
+  question      Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId    String   @unique
+  explanationFr String
+  explanationEn String?
+  videoUrl      String?
+  videoTitle    String?
+}
+
+model Submission {
+  id           String   @id @default(cuid())
+  quiz         Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  quizId       String
+  studentName  String
+  studentClass String?
+  score        Int
+  total        Int
+  language     String
+  answers      Answer[]
+  submittedAt  DateTime @default(now())
+
+  @@index([quizId, submittedAt])
+}
+
+model Answer {
+  id           String     @id @default(cuid())
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  submissionId String
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   String
+  chosenLetter String?
+  isCorrect    Boolean
+}
