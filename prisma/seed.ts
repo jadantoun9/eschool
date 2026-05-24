@@ -48,7 +48,7 @@ async function main() {
 
   const admin = await prisma.teacher.upsert({
     where: { email },
-    update: {},
+    update: { name, passwordHash, role: "SUPER_ADMIN" },
     create: { email, name, role: "SUPER_ADMIN", passwordHash },
   });
 

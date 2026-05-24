@@ -2,10 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Button } from "@/components/ui/button";
+import { QuizTableRow } from "@/components/QuizTableRow";
+import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 
 export default async function AdminDashboard() {
   const session = await auth();
   if (!session?.user) redirect("/admin/login");
+  const lang = await getLang();
 
   const isSuperAdmin = session.user.role === "SUPER_ADMIN";
 
@@ -20,51 +25,78 @@ export default async function AdminDashboard() {
   });
 
   return (
-    <div className="wrap" style={{ padding: 0, maxWidth: "none" }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 20 }}>
-        <h1 style={{ fontFamily: "Crimson Pro, serif", fontSize: 26 }}>Mes fiches</h1>
-        <Link href="/admin/quizzes/new" className="btn-primary" style={{ width: "auto", padding: "10px 18px", textDecoration: "none" }}>
-          + Nouvelle fiche
-        </Link>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+            {t("dash.title", lang)}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">{t("dash.subtitle", lang)}</p>
+        </div>
+        <Button
+          asChild
+          className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+        >
+          <Link href="/admin/quizzes/new">{t("dash.newQuiz", lang)}</Link>
+        </Button>
       </div>
 
       {quizzes.length === 0 ? (
-        <div className="card">
-          <p style={{ color: "var(--g500)" }}>Aucune fiche pour l&apos;instant. Créez-en une avec le bouton ci-dessus.</p>
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
+          <p className="text-sm text-slate-500">{t("dash.empty", lang)}</p>
+          <Button
+            asChild
+            variant="outline"
+            className="mt-4 h-10 border-slate-300 px-5"
+          >
+            <Link href="/admin/quizzes/new">{t("dash.createFirst", lang)}</Link>
+          </Button>
         </div>
       ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: "var(--g50)", textAlign: "left" }}>
-                <th style={th}>Titre</th>
-                <th style={th}>Matière / Niveau</th>
-                <th style={th}>Questions</th>
-                <th style={th}>Soumissions</th>
-                <th style={th}>Statut</th>
-                <th style={th}></th>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("dash.col.title", lang)}
+                </th>
+                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("dash.col.subjectGrade", lang)}
+                </th>
+                <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("dash.col.questions", lang)}
+                </th>
+                <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("dash.col.submissions", lang)}
+                </th>
+                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("dash.col.status", lang)}
+                </th>
+                <th
+                  className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500"
+                  style={{ width: 200 }}
+                >
+                  {t("dash.col.actions", lang)}
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {quizzes.map((q) => (
-                <tr key={q.id} style={{ borderTop: "1px solid var(--g100)" }}>
-                  <td style={td}>{q.titleFr}</td>
-                  <td style={td}>{q.subject.name} · {q.grade.name}</td>
-                  <td style={td}>{q._count.questions}</td>
-                  <td style={td}>{q._count.submissions}</td>
-                  <td style={td}>
-                    <span className={`tag ${q.isPublished ? "tag-c" : "tag-o"}`} style={{ display: "inline-block", padding: "2px 9px", borderRadius: 12, fontSize: 11, fontWeight: 700, background: q.isPublished ? "var(--green-l)" : "var(--g100)", color: q.isPublished ? "var(--green)" : "var(--g500)" }}>
-                      {q.isPublished ? "Publié" : "Brouillon"}
-                    </span>
-                  </td>
-                  <td style={td}>
-                    <Link href={`/admin/quizzes/${q.id}/edit`} style={linkStyle}>Éditer</Link>
-                    {" · "}
-                    <Link href={`/admin/quizzes/${q.id}/results`} style={linkStyle}>Résultats</Link>
-                    {" · "}
-                    <Link href={`/admin/quizzes/${q.id}/share`} style={linkStyle}>Partager</Link>
-                  </td>
-                </tr>
+                <QuizTableRow
+                  key={q.id}
+                  id={q.id}
+                  slug={q.slug}
+                  titleFr={q.titleFr}
+                  subjectName={q.subject.name}
+                  gradeName={q.grade.name}
+                  questionsCount={q._count.questions}
+                  submissionsCount={q._count.submissions}
+                  isPublished={q.isPublished}
+                  publishedLabel={t("dash.published", lang)}
+                  draftLabel={t("dash.draft", lang)}
+                  editLabel={t("dash.edit", lang)}
+                  resultsLabel={t("dash.results", lang)}
+                />
               ))}
             </tbody>
           </table>
@@ -73,7 +105,3 @@ export default async function AdminDashboard() {
     </div>
   );
 }
-
-const th: React.CSSProperties = { padding: "12px 16px", fontSize: 11, color: "var(--g500)", textTransform: "uppercase", fontWeight: 700, letterSpacing: ".05em" };
-const td: React.CSSProperties = { padding: "12px 16px", color: "var(--g600)" };
-const linkStyle: React.CSSProperties = { color: "var(--blue)", textDecoration: "none", fontWeight: 600 };
