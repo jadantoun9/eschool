@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,6 @@ const inputCls =
 
 export default function LoginClient({ strings }: { strings: Record<string, string> }) {
   const s = strings;
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -25,9 +23,14 @@ export default function LoginClient({ strings }: { strings: Record<string, strin
     setBusy(true);
     setErr(null);
     const res = await signIn("credentials", { email, password, redirect: false });
-    setBusy(false);
-    if (res?.error) setErr(s["login.invalid"]);
-    else router.push("/admin");
+    if (res?.error) {
+      setBusy(false);
+      setErr(s["login.invalid"]);
+      return;
+    }
+    // Hard navigate so the server re-renders /admin with the new session cookie.
+    // Leaving `busy` true keeps the spinner visible until the new page arrives.
+    window.location.assign("/admin");
   }
 
   return (
