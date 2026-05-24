@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dict, type Lang } from "@/lib/i18n";
+import { Spinner } from "@/components/Spinner";
 
 const inputCls =
   "h-11 border-slate-200 text-sm focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/10";
@@ -106,7 +107,7 @@ function AcceptInner() {
             disabled={busy}
             className="h-11 w-full bg-slate-900 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
           >
-            {busy ? "…" : s["invite.submit"]}
+            {busy ? <Spinner size={16} /> : s["invite.submit"]}
           </Button>
         </form>
       </div>

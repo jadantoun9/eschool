@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/Spinner";
 import {
   Select,
   SelectContent,
@@ -194,7 +195,13 @@ export default function NewQuizForm({
             onClick={create}
             className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
           >
-            {busy ? s["quiz.creating"] : s["quiz.create"]}
+            {busy ? (
+              <span className="inline-flex items-center gap-2">
+                <Spinner size={16} /> {s["quiz.creating"]}
+              </span>
+            ) : (
+              s["quiz.create"]
+            )}
           </Button>
         </div>
       </div>

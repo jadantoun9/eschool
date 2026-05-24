@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/Spinner";
 
 const inputCls =
   "h-11 border-slate-200 text-sm focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/10";
@@ -84,7 +85,13 @@ export default function LoginClient({ strings }: { strings: Record<string, strin
               disabled={busy}
               className="h-11 w-full bg-slate-900 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
             >
-              {busy ? s["login.submitting"] : s["login.submit"]}
+              {busy ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size={16} /> {s["login.submitting"]}
+                </span>
+              ) : (
+                s["login.submit"]
+              )}
             </Button>
           </form>
         </div>

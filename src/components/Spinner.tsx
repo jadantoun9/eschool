@@ -1,0 +1,49 @@
+import { cn } from "@/lib/utils";
+
+export function Spinner({
+  className,
+  size = 16,
+}: {
+  className?: string;
+  size?: number;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={cn("animate-spin", className)}
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  );
+}
+
+export function PageSpinner({ label }: { label?: string }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex items-center gap-3 text-slate-500">
+        <Spinner size={20} />
+        {label && <span className="text-sm">{label}</span>}
+      </div>
+    </div>
+  );
+}
+
+export function FullPageSpinner({ label }: { label?: string }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
+      <div className="flex items-center gap-3 text-slate-500">
+        <Spinner size={22} />
+        {label && <span className="text-sm">{label}</span>}
+      </div>
+    </div>
+  );
+}

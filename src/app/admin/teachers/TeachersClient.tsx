@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/Spinner";
 
 type T = {
   id: string;
@@ -103,7 +104,7 @@ export default function TeachersClient({
               onClick={invite}
               className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
             >
-              {busy ? "…" : s["teachers.createInvite"]}
+              {busy ? <Spinner size={16} /> : s["teachers.createInvite"]}
             </Button>
           </div>
           {link && (

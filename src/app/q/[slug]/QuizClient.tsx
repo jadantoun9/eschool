@@ -138,8 +138,40 @@ export default function QuizClient({ slug }: { slug: string }) {
     }
   }
 
-  if (loading) return <div className="wrap" style={{ padding: "3rem 1rem" }}>Chargement…</div>;
-  if (!quiz) return <div className="wrap" style={{ padding: "3rem 1rem" }}>{error ?? "Quiz introuvable."}</div>;
+  if (loading)
+    return (
+      <div
+        style={{
+          display: "flex",
+          minHeight: "70vh",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "var(--g500)",
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ animation: "spin 1s linear infinite" }}
+        >
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  if (!quiz)
+    return (
+      <div className="wrap" style={{ padding: "3rem 1rem" }}>
+        {error ?? "Quiz introuvable."}
+      </div>
+    );
 
   // Cumulative question number across parts so users still see "Q1..QN" globally.
   let qCounter = 0;

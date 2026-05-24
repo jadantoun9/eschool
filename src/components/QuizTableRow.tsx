@@ -26,7 +26,7 @@ export function QuizTableRow(p: Props) {
   const router = useRouter();
 
   function openStudentView() {
-    window.open(`/q/${p.slug}`, "_blank", "noopener,noreferrer");
+    router.push(`/q/${p.slug}`);
   }
 
   function stop(e: React.MouseEvent) {

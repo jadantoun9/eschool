@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/Spinner";
 import {
   Select,
   SelectContent,
@@ -612,7 +613,13 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
 
       <div className="sticky bottom-0 -mx-8 border-t bg-background/90 px-8 py-3 backdrop-blur">
         <Button onClick={save} disabled={busy} className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800">
-          {busy ? s["edit.saving"] : s["edit.save"]}
+          {busy ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size={16} /> {s["edit.saving"]}
+            </span>
+          ) : (
+            s["edit.save"]
+          )}
         </Button>
       </div>
     </div>
