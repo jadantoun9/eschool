@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { Spinner } from "@/components/Spinner";
 
@@ -52,19 +53,7 @@ export default function LoginClient({
       }}>
         {/* Brand mark */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-          <div style={{
-            width: 44, height: 44,
-            borderRadius: 999,
-            background: "#ffffff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: 15,
-            color: "#0a1936",
-            letterSpacing: "-0.02em",
-          }}>
-            ICE
-          </div>
+          <Image src="/ice-logo.png" alt="ICE" width={64} height={64} priority />
         </div>
 
         <h1 style={{
