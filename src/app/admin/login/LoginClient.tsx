@@ -2,16 +2,15 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/Spinner";
 
-const inputCls =
-  "h-11 border-slate-200 text-sm focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/10";
-
-export default function LoginClient({ strings }: { strings: Record<string, string> }) {
+export default function LoginClient({
+  strings,
+  notice,
+}: {
+  strings: Record<string, string>;
+  notice?: string | null;
+}) {
   const s = strings;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,70 +33,134 @@ export default function LoginClient({ strings }: { strings: Record<string, strin
   }
 
   return (
-    <div
-      className="flex min-h-screen items-center justify-center bg-slate-100 p-6"
-      style={{ fontFamily: "var(--font-sans), Inter, system-ui, sans-serif" }}
-    >
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            {s["login.title"]}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">{s["login.subtitle"]}</p>
+    <div style={{
+      minHeight: "calc(100vh - 80px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "40px 24px",
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 460,
+        background: "var(--surface)",
+        border: "1px solid var(--border-strong)",
+        borderRadius: "var(--radius-xl)",
+        padding: 40,
+        boxShadow: "0 30px 80px -20px rgba(0,0,0,0.5)",
+        position: "relative",
+      }}>
+        {/* Brand mark */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
+          <div style={{
+            width: 44, height: 44,
+            borderRadius: 999,
+            background: "#ffffff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "var(--font-display)",
+            fontWeight: 800,
+            fontSize: 15,
+            color: "#0a1936",
+            letterSpacing: "-0.02em",
+          }}>
+            ICE
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <form onSubmit={onSubmit} className="flex flex-col gap-5">
-            <div className="grid gap-2">
-              <Label htmlFor="email" className="text-sm font-medium text-slate-700">
-                {s["login.email"]}
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                placeholder={s["login.emailPlaceholder"]}
-                className={inputCls}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password" className="text-sm font-medium text-slate-700">
-                {s["login.password"]}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                className={inputCls}
-              />
-            </div>
-            {err && (
-              <Alert variant="destructive">
-                <AlertDescription>{err}</AlertDescription>
-              </Alert>
+        <h1 style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 700,
+          fontSize: 32,
+          letterSpacing: "-0.015em",
+          textAlign: "center",
+          marginBottom: 8,
+        }}>
+          {s["login.title"]}
+        </h1>
+        <p style={{ color: "var(--text-muted)", textAlign: "center", marginBottom: 32, fontSize: 14 }}>
+          {s["login.subtitle"]}
+        </p>
+
+        {/* Session-expired notice */}
+        {notice && (
+          <div style={{
+            padding: "12px 14px",
+            marginBottom: 18,
+            background: "rgba(245,158,11,0.12)",
+            border: "1px solid rgba(245,158,11,0.35)",
+            borderRadius: 10,
+            color: "#fcd34d",
+            fontSize: 13,
+            display: "flex",
+            gap: 10,
+          }}>
+            <span style={{ fontWeight: 700 }}>⚠</span>
+            <span>{notice}</span>
+          </div>
+        )}
+
+        {/* Wrong credentials error */}
+        {err && (
+          <div style={{
+            padding: "12px 14px",
+            marginBottom: 18,
+            background: "rgba(239,68,68,0.12)",
+            border: "1px solid rgba(239,68,68,0.35)",
+            borderRadius: 10,
+            color: "#fca5a5",
+            fontSize: 13,
+            display: "flex",
+            gap: 10,
+          }}>
+            <span style={{ fontWeight: 700 }}>✗</span>
+            <span>{err}</span>
+          </div>
+        )}
+
+        <form onSubmit={onSubmit}>
+          <div className="field">
+            <label className="field__label" htmlFor="email">{s["login.email"]}</label>
+            <input
+              id="email"
+              className="input"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder={s["login.emailPlaceholder"]}
+            />
+          </div>
+
+          <div className="field">
+            <label className="field__label" htmlFor="password">{s["login.password"]}</label>
+            <input
+              id="password"
+              className="input"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="btn btn--primary"
+            style={{ width: "100%", marginTop: 4 }}
+          >
+            {busy ? (
+              <>
+                <Spinner size={16} /> {s["login.submitting"]}
+              </>
+            ) : (
+              s["login.submit"]
             )}
-            <Button
-              type="submit"
-              disabled={busy}
-              className="h-11 w-full bg-slate-900 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
-            >
-              {busy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Spinner size={16} /> {s["login.submitting"]}
-                </span>
-              ) : (
-                s["login.submit"]
-              )}
-            </Button>
-          </form>
-        </div>
+          </button>
+        </form>
       </div>
     </div>
   );

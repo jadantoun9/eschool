@@ -17,24 +17,18 @@ export default async function TeachersPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          {t("teachers.title", lang)}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">{t("teachers.subtitle", lang)}</p>
-      </div>
-      <TeachersClient
-        strings={dict[lang]}
-        teachers={teachers.map((t) => ({
-          id: t.id,
-          email: t.email,
-          name: t.name,
-          role: t.role,
-          status: t.passwordHash ? "active" : "pending",
-          inviteToken: t.inviteToken,
-        }))}
-      />
-    </div>
+    <TeachersClient
+      lang={lang}
+      strings={dict[lang]}
+      teachers={teachers.map((t) => ({
+        id: t.id,
+        email: t.email,
+        name: t.name,
+        role: t.role,
+        status: t.passwordHash ? "active" : "pending",
+        inviteToken: t.inviteToken,
+        createdAt: t.createdAt.toISOString(),
+      }))}
+    />
   );
 }

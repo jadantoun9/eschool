@@ -25,6 +25,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
 
   const total = quiz.questions.length;
 
+  // Per-skill stats (used for per-question performance section)
   const skillStats = new Map<string, { correct: number; total: number }>();
   for (const sub of quiz.submissions) {
     for (const ans of sub.answers) {
@@ -37,104 +38,541 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  // KPI: average score
+  const submissionCount = quiz.submissions.length;
+  const avgScore =
+    submissionCount === 0
+      ? 0
+      : Math.round(
+          quiz.submissions.reduce((acc, sub) => {
+            const pct = Math.round((sub.score / Math.max(1, sub.total)) * 100);
+            return acc + pct;
+          }, 0) / submissionCount
+        );
+
+  // KPI: completion rate (submissions that answered all questions)
+  const completedCount = quiz.submissions.filter(
+    (sub) => sub.answers.length >= total
+  ).length;
+  const completionPct =
+    submissionCount === 0 ? 0 : Math.round((completedCount / submissionCount) * 100);
+
+  // Score distribution buckets: 0-30, 30-50, 50-60, 60-70, 70-80, 80-90, 90-100
+  const bucketLabels = ["0–30", "30–50", "50–60", "60–70", "70–80", "80–90", "90–100"];
+  const buckets = [0, 0, 0, 0, 0, 0, 0];
+  for (const sub of quiz.submissions) {
+    const pct = Math.round((sub.score / Math.max(1, sub.total)) * 100);
+    if (pct < 30) buckets[0]++;
+    else if (pct < 50) buckets[1]++;
+    else if (pct < 60) buckets[2]++;
+    else if (pct < 70) buckets[3]++;
+    else if (pct < 80) buckets[4]++;
+    else if (pct < 90) buckets[5]++;
+    else buckets[6]++;
+  }
+  const maxBucket = Math.max(...buckets, 1);
+
+  // Recent submissions (top 5)
+  const recentSubs = quiz.submissions.slice(0, 5);
+
   return (
-    <div className="flex max-w-5xl flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          {t("results.title", lang)}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {quiz.titleFr} · {quiz.submissions.length} {t("results.summary", lang)} {total}{" "}
-          {t("results.questions", lang)}
-        </p>
+    <>
+      {/* Back link */}
+      <a
+        href="/admin"
+        className="muted"
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 18 }}
+      >
+        ← {lang === "fr" ? "Tableau de bord" : "Dashboard"}
+      </a>
+
+      {/* Page header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 24,
+          marginBottom: 32,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1 className="h1" style={{ marginBottom: 6 }}>
+            {lang === "fr" ? quiz.titleFr : quiz.titleFr}
+          </h1>
+          <p className="muted">
+            {lang === "fr" ? "Résultats · 30 derniers jours" : "Results · last 30 days"}
+          </p>
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <a href={`/admin/quizzes/${id}/edit`} className="btn btn--ghost btn--sm">
+            {lang === "fr" ? "Modifier" : "Edit quiz"}
+          </a>
+        </div>
       </div>
 
-      {skillStats.size > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 text-base font-semibold text-slate-900">
-            {t("results.bySkill", lang)}
+      {/* KPI grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 14,
+          marginBottom: 28,
+        }}
+      >
+        {/* Submissions */}
+        <div className="card" style={{ padding: "20px 22px" }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 14,
+            }}
+          >
+            {lang === "fr" ? "Soumissions" : "Submissions"}
           </div>
-          <div className="flex flex-col gap-4">
-            {[...skillStats.entries()].map(([skill, st]) => {
-              const pct = Math.round((st.correct / Math.max(1, st.total)) * 100);
-              const barColor =
-                pct >= 75
-                  ? "bg-emerald-500"
-                  : pct >= 50
-                  ? "bg-amber-500"
-                  : "bg-rose-500";
-              return (
-                <div key={skill}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-800">{skill}</span>
-                    <span className="text-xs text-slate-500">
-                      {pct}% · {st.correct}/{st.total}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="numeric"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 46,
+              lineHeight: 1,
+              color: "#fff",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {submissionCount}
+          </div>
+        </div>
+
+        {/* Average score */}
+        <div className="card" style={{ padding: "20px 22px" }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 14,
+            }}
+          >
+            {lang === "fr" ? "Score moyen" : "Average score"}
+          </div>
+          <div
+            className="numeric"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 46,
+              lineHeight: 1,
+              color: "var(--accent)",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {avgScore}
+            <span style={{ fontSize: 28, color: "var(--text-muted)" }}>%</span>
+          </div>
+        </div>
+
+        {/* Completion */}
+        <div className="card" style={{ padding: "20px 22px" }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 14,
+            }}
+          >
+            {lang === "fr" ? "Achèvement" : "Completion"}
+          </div>
+          <div
+            className="numeric"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 46,
+              lineHeight: 1,
+              color: "#fff",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {completionPct}
+            <span style={{ fontSize: 28, color: "var(--text-muted)" }}>%</span>
+          </div>
+        </div>
+
+        {/* Questions */}
+        <div className="card" style={{ padding: "20px 22px" }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 14,
+            }}
+          >
+            {lang === "fr" ? "Questions" : "Questions"}
+          </div>
+          <div
+            className="numeric"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 46,
+              lineHeight: 1,
+              color: "#fff",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {total}
+          </div>
+        </div>
+      </div>
+
+      {/* Two-panel row: score distribution + recent submissions */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 18,
+          marginBottom: 24,
+        }}
+      >
+        {/* Score distribution */}
+        <div className="card" style={{ padding: 24 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 18,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{lang === "fr" ? "Distribution des scores" : "Score distribution"}</span>
+            <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+              {submissionCount} {lang === "fr" ? "soumissions" : "submissions"}
+            </span>
+          </div>
+          {submissionCount === 0 ? (
+            <div className="muted" style={{ textAlign: "center", padding: "32px 0", fontSize: 13 }}>
+              {t("results.empty", lang)}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-end",
+                gap: 10,
+                height: 180,
+                padding: "8px 4px 0",
+              }}
+            >
+              {buckets.map((v, i) => {
+                const isPeak = v === maxBucket && v > 0;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <div
-                      className={`h-full rounded-full ${barColor}`}
-                      style={{ width: `${pct}%` }}
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-muted)",
+                      }}
+                    >
+                      {v}
+                    </div>
+                    <div
+                      style={{
+                        width: "100%",
+                        background: isPeak
+                          ? "linear-gradient(180deg, var(--accent), rgba(255,204,0,0.35))"
+                          : "var(--surface-2)",
+                        borderRadius: "6px 6px 0 0",
+                        minHeight: 6,
+                        height: `${(v / maxBucket) * 130 + 6}px`,
+                        transition: "background 120ms",
+                      }}
+                    />
+                    <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
+                      {bucketLabels[i]}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Recent submissions */}
+        <div className="card" style={{ padding: 24 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 18,
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{lang === "fr" ? "Soumissions récentes" : "Recent submissions"}</span>
+          </div>
+          {recentSubs.length === 0 ? (
+            <div className="muted" style={{ textAlign: "center", padding: "32px 0", fontSize: 13 }}>
+              {t("results.empty", lang)}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {recentSubs.map((sub, i) => {
+                const pct = Math.round((sub.score / Math.max(1, sub.total)) * 100);
+                const scoreColor =
+                  pct >= 80 ? "#86efac" : pct >= 60 ? "var(--accent)" : "#fca5a5";
+                return (
+                  <div
+                    key={sub.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 0",
+                      borderBottom:
+                        i < recentSubs.length - 1 ? "1px solid var(--border)" : undefined,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>
+                        {sub.studentName}
+                        {sub.studentClass && (
+                          <span className="muted" style={{ fontWeight: 400, marginLeft: 6 }}>
+                            · {sub.studentClass}
+                          </span>
+                        )}
+                      </div>
+                      <div className="muted" style={{ fontSize: 12 }}>
+                        {new Date(sub.submittedAt).toLocaleDateString(
+                          lang === "fr" ? "fr-FR" : "en-US"
+                        )}
+                        {" · "}
+                        {sub.language.toUpperCase()}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div
+                        className="numeric"
+                        style={{
+                          fontFamily: "var(--font-display)",
+                          fontWeight: 700,
+                          fontSize: 22,
+                          color: scoreColor,
+                        }}
+                      >
+                        {pct}
+                        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>%</span>
+                      </div>
+                      <div className="muted" style={{ fontSize: 11 }}>
+                        {sub.score}/{sub.total}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Per-skill performance table */}
+      {skillStats.size > 0 && (
+        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 18,
+              display: "flex",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <span>{lang === "fr" ? "Performance par compétence" : "Per-skill performance"}</span>
+            <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+              {lang === "fr"
+                ? "Plus le % est bas, plus la question est difficile"
+                : "Lower % = harder — review the explanation"}
+            </span>
+          </div>
+
+          {/* Table header */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 50px 80px",
+              gap: 12,
+              padding: "6px 0 10px",
+              borderBottom: "1px solid var(--border)",
+              color: "var(--text-muted)",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            <span>{lang === "fr" ? "Compétence" : "Skill"}</span>
+            <span style={{ textAlign: "right" }}>{lang === "fr" ? "Correct" : "Correct"}</span>
+            <span style={{ textAlign: "right" }}>{lang === "fr" ? "Taux" : "Rate"}</span>
+          </div>
+
+          {[...skillStats.entries()].map(([skill, st], idx, arr) => {
+            const pct = Math.round((st.correct / Math.max(1, st.total)) * 100);
+            const tier = pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad";
+            const barColor =
+              tier === "good"
+                ? "var(--success)"
+                : tier === "mid"
+                ? "var(--accent)"
+                : "var(--danger)";
+            const textColor = tier === "bad" ? "#fca5a5" : "#fff";
+            return (
+              <div
+                key={skill}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 50px 80px",
+                  gap: 12,
+                  alignItems: "center",
+                  padding: "10px 0",
+                  borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : undefined,
+                  fontSize: 13,
+                }}
+              >
+                {/* Skill name + bar */}
+                <div>
+                  <div style={{ marginBottom: 6, fontWeight: 500 }}>{skill}</div>
+                  <div
+                    style={{
+                      height: 6,
+                      background: "rgba(255,255,255,0.06)",
+                      borderRadius: 999,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "block",
+                        height: "100%",
+                        borderRadius: 999,
+                        width: `${pct}%`,
+                        background: barColor,
+                      }}
                     />
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div
+                  className="numeric muted"
+                  style={{ textAlign: "right" }}
+                >
+                  {st.correct}/{st.total}
+                </div>
+                <div
+                  className="numeric"
+                  style={{ textAlign: "right", fontWeight: 600, color: textColor }}
+                >
+                  {pct}%
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-6 py-4 text-base font-semibold text-slate-900">
-          {t("results.submissions", lang)}
+      {/* All submissions table */}
+      <div className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 40 }}>
+        <div
+          style={{
+            padding: "18px 24px",
+            borderBottom: "1px solid var(--border)",
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            color: "var(--text-muted)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{t("results.submissions", lang)}</span>
+          <span className="badge badge--draft" style={{ textTransform: "none", letterSpacing: 0 }}>
+            {submissionCount}
+          </span>
         </div>
         {quiz.submissions.length === 0 ? (
-          <div className="px-6 py-10 text-center text-sm text-slate-500">
-            {t("results.empty", lang)}
+          <div className="empty-state" style={{ padding: "48px 24px" }}>
+            <div className="empty-state__icon">📭</div>
+            <p>{t("results.empty", lang)}</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="table">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.student", lang)}
-                </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.class", lang)}
-                </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.score", lang)}
-                </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.pct", lang)}
-                </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.lang", lang)}
-                </th>
-                <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("results.col.date", lang)}
-                </th>
+              <tr>
+                <th>{t("results.col.student", lang)}</th>
+                <th>{t("results.col.class", lang)}</th>
+                <th>{t("results.col.score", lang)}</th>
+                <th>{t("results.col.pct", lang)}</th>
+                <th>{t("results.col.lang", lang)}</th>
+                <th>{t("results.col.date", lang)}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {quiz.submissions.map((sub) => {
                 const pct = Math.round((sub.score / Math.max(1, sub.total)) * 100);
+                const scoreColor =
+                  pct >= 80 ? "#86efac" : pct >= 60 ? "var(--accent)" : "#fca5a5";
                 return (
-                  <tr key={sub.id} className="transition-colors hover:bg-slate-50/60">
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      {sub.studentName}
+                  <tr key={sub.id}>
+                    <td style={{ fontWeight: 600 }}>{sub.studentName}</td>
+                    <td className="muted">{sub.studentClass ?? "—"}</td>
+                    <td className="numeric">{sub.score}/{sub.total}</td>
+                    <td
+                      className="numeric"
+                      style={{ fontWeight: 700, color: scoreColor }}
+                    >
+                      {pct}%
                     </td>
-                    <td className="px-6 py-4 text-slate-500">
-                      {sub.studentClass ?? "—"}
+                    <td>
+                      <span className="badge badge--draft">
+                        {sub.language.toUpperCase()}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 tabular-nums text-slate-700">
-                      {sub.score}/{sub.total}
-                    </td>
-                    <td className="px-6 py-4 tabular-nums text-slate-700">{pct}%</td>
-                    <td className="px-6 py-4 text-slate-500">
-                      {sub.language.toUpperCase()}
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="muted">
                       {new Date(sub.submittedAt).toLocaleString(
                         lang === "fr" ? "fr-FR" : "en-US"
                       )}
@@ -146,6 +584,6 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           </table>
         )}
       </div>
-    </div>
+    </>
   );
 }

@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -88,68 +90,89 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
   }
 
-  // Atomic replace: wipe parts + questions for this quiz then recreate.
-  await prisma.$transaction(async (tx) => {
-    await tx.question.deleteMany({ where: { quizId: id } });
-    await tx.part.deleteMany({ where: { quizId: id } });
+  const { parts, questions } = parsed.data;
 
-    // Create parts first; map clientId → DB id for question linking.
-    const partIdByClientId = new Map<string, string>();
-    for (const p of parsed.data.parts) {
-      const dbPart = await tx.part.create({
-        data: {
-          quizId: id,
-          order: p.order,
-          titleFr: p.titleFr,
-          titleEn: p.titleEn || null,
-          subtitleFr: p.subtitleFr || null,
-          subtitleEn: p.subtitleEn || null,
-        },
-      });
-      partIdByClientId.set(p.clientId, dbPart.id);
+  // Build every row up front with pre-generated ids, then bulk-insert each
+  // table with a single `createMany`. Prisma nested/per-row writes issue one
+  // INSERT per row, which over a high-latency (Neon) connection blew past the
+  // transaction timeout; this collapses the save to ~6 statements total. Rows
+  // are ordered so parents precede children (FK checks pass within each
+  // multi-row INSERT). A child's `partId` stays null — it's read via the
+  // `followUps` relation, never by part.
+  const partIdByClientId = new Map<string, string>();
+  for (const p of parts) partIdByClientId.set(p.clientId, randomUUID());
+
+  const partRows: Prisma.PartCreateManyInput[] = parts.map((p) => ({
+    id: partIdByClientId.get(p.clientId)!,
+    quizId: id,
+    order: p.order,
+    titleFr: p.titleFr,
+    titleEn: p.titleEn || null,
+    subtitleFr: p.subtitleFr || null,
+    subtitleEn: p.subtitleEn || null,
+  }));
+
+  const questionRows: Prisma.QuestionCreateManyInput[] = [];
+  const optionRows: Prisma.OptionCreateManyInput[] = [];
+  const remediationRows: Prisma.RemediationCreateManyInput[] = [];
+
+  for (const q of questions) {
+    const mainId = randomUUID();
+    questionRows.push({
+      id: mainId,
+      quizId: id,
+      partId: q.partClientId ? partIdByClientId.get(q.partClientId) ?? null : null,
+      order: q.order,
+      skillTag: q.skillTag || null,
+      textFr: q.textFr,
+      textEn: q.textEn || null,
+      hintFr: q.hintFr || null,
+      hintEn: q.hintEn || null,
+      explanationFr: q.explanationFr ?? "",
+      explanationEn: q.explanationEn || null,
+    });
+    for (const o of q.options) {
+      optionRows.push({ id: randomUUID(), questionId: mainId, letter: o.letter, textFr: o.textFr, textEn: o.textEn || null, isCorrect: o.isCorrect });
     }
-
-    for (const q of parsed.data.questions) {
-      const main = await tx.question.create({
-        data: {
-          quizId: id,
-          partId: q.partClientId ? partIdByClientId.get(q.partClientId) ?? null : null,
-          order: q.order,
-          skillTag: q.skillTag || null,
-          textFr: q.textFr,
-          textEn: q.textEn || null,
-          hintFr: q.hintFr || null,
-          hintEn: q.hintEn || null,
-          explanationFr: q.explanationFr ?? "",
-          explanationEn: q.explanationEn || null,
-          options: { create: q.options.map((o) => ({ ...o, textEn: o.textEn || null })) },
-          remediation: q.remediation
-            ? {
-                create: {
-                  explanationFr: q.remediation.explanationFr,
-                  explanationEn: q.remediation.explanationEn || null,
-                  videoUrl: q.remediation.videoUrl || null,
-                  videoTitle: q.remediation.videoTitle || null,
-                },
-              }
-            : undefined,
-        },
+    if (q.remediation) {
+      remediationRows.push({
+        id: randomUUID(),
+        questionId: mainId,
+        explanationFr: q.remediation.explanationFr,
+        explanationEn: q.remediation.explanationEn || null,
+        videoUrl: q.remediation.videoUrl || null,
+        videoTitle: q.remediation.videoTitle || null,
       });
-      for (const fu of q.followUps ?? []) {
-        await tx.question.create({
-          data: {
-            quizId: id,
-            parentId: main.id,
-            order: 0,
-            textFr: fu.textFr,
-            textEn: fu.textEn || null,
-            explanationFr: "",
-            options: { create: fu.options.map((o) => ({ ...o, textEn: o.textEn || null })) },
-          },
-        });
+    }
+    for (const fu of q.followUps ?? []) {
+      const fuId = randomUUID();
+      questionRows.push({
+        id: fuId,
+        quizId: id,
+        parentId: mainId,
+        order: 0,
+        textFr: fu.textFr,
+        textEn: fu.textEn || null,
+        explanationFr: "",
+      });
+      for (const o of fu.options) {
+        optionRows.push({ id: randomUUID(), questionId: fuId, letter: o.letter, textFr: o.textFr, textEn: o.textEn || null, isCorrect: o.isCorrect });
       }
     }
-  });
+  }
+
+  // Atomic replace: wipe parts + questions for this quiz then recreate.
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.question.deleteMany({ where: { quizId: id } });
+      await tx.part.deleteMany({ where: { quizId: id } });
+      if (partRows.length) await tx.part.createMany({ data: partRows });
+      if (questionRows.length) await tx.question.createMany({ data: questionRows });
+      if (optionRows.length) await tx.option.createMany({ data: optionRows });
+      if (remediationRows.length) await tx.remediation.createMany({ data: remediationRows });
+    },
+    { timeout: 120_000, maxWait: 15_000 }
+  );
 
   return NextResponse.json({ ok: true });
 }

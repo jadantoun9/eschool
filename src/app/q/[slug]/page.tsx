@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { CopyLinkFloating } from "@/components/CopyLinkFloating";
+import { SiteNav } from "@/components/SiteNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import QuizClient from "./QuizClient";
 
 export const dynamic = "force-dynamic";
@@ -22,15 +24,23 @@ export default async function StudentQuizPage({
   const lang = await getLang();
 
   return (
-    <div className="student-shell">
-      {isStaff && (
-        <CopyLinkFloating
-          slug={slug}
-          label={t("dash.copyLink", lang)}
-          copiedLabel={t("dash.linkCopied", lang)}
-        />
-      )}
-      <QuizClient slug={slug} />
+    <div className="page">
+      <div className="page-inner">
+        <SiteNav mode="public" />
+        {isStaff && (
+          <CopyLinkFloating
+            slug={slug}
+            label={t("dash.copyLink", lang)}
+            copiedLabel={t("dash.linkCopied", lang)}
+          />
+        )}
+        <section className="section">
+          <div className="container container--narrow">
+            <QuizClient slug={slug} />
+          </div>
+        </section>
+        <SiteFooter />
+      </div>
     </div>
   );
 }

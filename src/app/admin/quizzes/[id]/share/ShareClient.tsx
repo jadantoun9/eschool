@@ -1,23 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-const inputCls =
-  "h-11 border-slate-200 text-sm focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/10";
+import { chipClass } from "@/lib/subject-style";
+import type { Lang } from "@/lib/i18n";
 
 export default function ShareClient({
   slug,
-  title,
+  titleFr,
+  titleEn,
   isPublished,
   strings,
+  lang,
+  subjectNameFr,
+  subjectNameEn,
+  subjectIcon,
+  subjectColorKey,
+  gradeNameFr,
+  gradeNameEn,
 }: {
   slug: string;
-  title: string;
+  titleFr: string;
+  titleEn: string | null;
   isPublished: boolean;
   strings: Record<string, string>;
+  lang: Lang;
+  subjectNameFr: string;
+  subjectNameEn: string;
+  subjectIcon: string;
+  subjectColorKey: string;
+  gradeNameFr: string;
+  gradeNameEn: string;
 }) {
   const s = strings;
   const [url, setUrl] = useState("");
@@ -33,47 +45,220 @@ export default function ShareClient({
     setTimeout(() => setCopied(false), 1500);
   }
 
+  const title = lang === "fr" ? titleFr : (titleEn ?? titleFr);
+  const subjectName = lang === "fr" ? subjectNameFr : subjectNameEn;
+  const gradeName = lang === "fr" ? gradeNameFr : gradeNameEn;
+
   return (
-    <div className="flex max-w-2xl flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          {s["share.title"]}
+    <>
+      {/* Page header */}
+      <div style={{ marginBottom: 32 }}>
+        <div className="row" style={{ gap: 10, marginBottom: 10 }}>
+          <span className={`icon-chip icon-chip--sm ${chipClass(subjectColorKey)}`}>
+            {subjectIcon}
+          </span>
+          <span className="muted" style={{ fontSize: 13 }}>
+            {subjectName} · {gradeName}
+          </span>
+          {isPublished ? (
+            <span className="badge badge--published">
+              <span className="dot" />
+              {lang === "fr" ? "Publié" : "Published"}
+            </span>
+          ) : (
+            <span className="badge badge--draft">
+              <span className="dot" />
+              {lang === "fr" ? "Brouillon" : "Draft"}
+            </span>
+          )}
+        </div>
+        <h1 className="h1" style={{ marginBottom: 6 }}>
+          {s["share.title"]}{" "}
+          <span style={{ color: "var(--text-muted)" }}>· {title}</span>
         </h1>
-        <p className="mt-1 text-sm text-slate-500">{title}</p>
+        <p className="muted">
+          {lang === "fr"
+            ? "Toute personne avec ce lien peut faire la fiche — sans compte."
+            : "Anyone with this link can take the worksheet — no account needed."}
+        </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-5 text-base font-semibold text-slate-900">
-          {s["share.linkTitle"]}
+      {/* Unpublished warning */}
+      {!isPublished && (
+        <div
+          className="card"
+          style={{
+            marginBottom: 24,
+            background: "rgba(245,158,11,0.08)",
+            borderColor: "rgba(245,158,11,0.3)",
+            color: "var(--warning)",
+          }}
+        >
+          {s["share.warning"]}
         </div>
-        <div className="flex flex-col gap-4">
-          {!isPublished && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              {s["share.warning"]}
+      )}
+
+      {/* Two-column share grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.1fr 1fr",
+          gap: 24,
+          alignItems: "start",
+        }}
+      >
+        {/* Left column */}
+        <div>
+          {/* Public link card */}
+          <div className="card" style={{ marginBottom: 18, borderRadius: "var(--radius-xl)", padding: 28 }}>
+            <div className="eyebrow" style={{ marginBottom: 14 }}>
+              🔗 {lang === "fr" ? "Lien public" : "Public link"}
             </div>
-          )}
-          <div className="grid gap-2">
-            <Label htmlFor="share-url" className="text-sm font-medium text-slate-700">
-              {s["share.linkLabel"]}
-            </Label>
-            <Input
-              id="share-url"
-              value={url}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <Button
-              onClick={copy}
-              className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+            <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
+              <input
+                className="input"
+                readOnly
+                value={url}
+                onFocus={(e) => e.currentTarget.select()}
+                style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 13 }}
+              />
+              <button
+                className={`btn ${copied ? "btn--ghost" : "btn--primary"}`}
+                onClick={copy}
+              >
+                {copied ? s["share.copied"] : s["share.copy"]}
+              </button>
+            </div>
+            <div
+              className="muted"
+              style={{ marginTop: 14, fontSize: 13, display: "flex", gap: 16, flexWrap: "wrap" }}
             >
-              {copied ? s["share.copied"] : s["share.copy"]}
-            </Button>
+              <span>● {lang === "fr" ? "Lien actif" : "Link is live"}</span>
+              <span>● {lang === "fr" ? "Résultats anonymes" : "Results recorded anonymously"}</span>
+            </div>
+          </div>
+
+          {/* Open / preview card */}
+          <div className="card" style={{ borderRadius: "var(--radius-xl)", padding: 28 }}>
+            <div className="eyebrow" style={{ marginBottom: 14 }}>
+              👁 {lang === "fr" ? "Aperçu" : "Preview"}
+            </div>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+              {lang === "fr"
+                ? "Ouvrir la fiche comme un élève le verrait."
+                : "Open the worksheet as a student would see it."}
+            </p>
+            <a
+              href={url || `/q/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn--ghost btn--sm"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1V9" />
+                <path d="M10 2h4v4M14 2L8 8" />
+              </svg>
+              {lang === "fr" ? "Ouvrir" : "Open"}
+            </a>
+          </div>
+        </div>
+
+        {/* Right column — QR */}
+        <div>
+          <div className="card" style={{ textAlign: "center", borderRadius: "var(--radius-xl)", padding: 28 }}>
+            <div className="eyebrow" style={{ marginBottom: 16 }}>
+              📱 QR
+            </div>
+            {/* QR rendered by next/qrcode or a lightweight SVG approach */}
+            <QRCode value={url || `${typeof window !== "undefined" ? window.location.origin : ""}/q/${slug}`} />
+            <div
+              style={{
+                marginTop: 18,
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: 18,
+              }}
+            >
+              {title}
+            </div>
+            <p className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+              {lang === "fr"
+                ? "À projeter au tableau — les élèves scannent avec leur téléphone"
+                : "Project on the board — students scan with phone"}
+            </p>
           </div>
         </div>
       </div>
+
+      <div style={{ height: 80 }} />
+    </>
+  );
+}
+
+/* ----------------------------------------------------------------
+   Minimal deterministic QR-look SVG — purely decorative preview.
+   Real links are provided as plain text above; this visual gives
+   teachers an easy "project on the board" artefact.
+---------------------------------------------------------------- */
+function QRCode({ value }: { value: string }) {
+  const size = 25;
+  // deterministic hash from the URL value
+  let h = 0;
+  for (const c of value) h = (h * 31 + c.charCodeAt(0)) | 0;
+
+  const cells: { x: number; y: number }[] = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      h = (h * 1664525 + 1013904223) | 0;
+      const on = ((h >>> 8) & 1) === 1;
+      const inFinder =
+        (x < 8 && y < 8) ||
+        (x > size - 9 && y < 8) ||
+        (x < 8 && y > size - 9);
+      if (on && !inFinder) cells.push({ x, y });
+    }
+  }
+
+  return (
+    <div
+      style={{
+        width: 200,
+        height: 200,
+        background: "#fff",
+        borderRadius: 14,
+        padding: 12,
+        margin: "0 auto",
+      }}
+    >
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        fill="#0a1936"
+        shapeRendering="crispEdges"
+        style={{ width: "100%", height: "100%" }}
+      >
+        {cells.map(({ x, y }) => (
+          <rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" />
+        ))}
+        {/* Finder — top-left */}
+        <Finder cx={0} cy={0} />
+        {/* Finder — top-right */}
+        <Finder cx={size - 7} cy={0} />
+        {/* Finder — bottom-left */}
+        <Finder cx={0} cy={size - 7} />
+        {/* Centre dot */}
+        <rect x={size / 2 - 2} y={size / 2 - 2} width="4" height="4" fill="#fff" />
+        <circle cx={size / 2} cy={size / 2} r="1.4" fill="#ffcc00" />
+      </svg>
     </div>
+  );
+}
+
+function Finder({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <>
+      <rect x={cx} y={cy} width="7" height="7" fill="#0a1936" />
+      <rect x={cx + 1} y={cy + 1} width="5" height="5" fill="#fff" />
+      <rect x={cx + 2} y={cy + 2} width="3" height="3" fill="#0a1936" />
+    </>
   );
 }

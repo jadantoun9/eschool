@@ -1,23 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/Spinner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -120,6 +105,19 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
   const [titleEn, setTitleEn] = useState(quiz.titleEn ?? "");
   const [isPublished, setIsPublished] = useState(quiz.isPublished);
 
+  const [studentUrl, setStudentUrl] = useState(`/q/${quiz.slug}`);
+  const [copied, setCopied] = useState(false);
+  const [prelimOpen, setPrelimOpen] = useState(false);
+  useEffect(() => {
+    setStudentUrl(`${window.location.origin}/q/${quiz.slug}`);
+  }, [quiz.slug]);
+
+  async function copyLink() {
+    await navigator.clipboard.writeText(studentUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
   const [prelim, setPrelim] = useState({
     badgeFr: quiz.prelimBadgeFr ?? "",
     badgeEn: quiz.prelimBadgeEn ?? "",
@@ -131,23 +129,39 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
     embedUrl: quiz.prelimEmbedUrl ?? "",
   });
 
+  // Auto-migrate any unparted questions into a default part so the new UI
+  // (where every question lives inside a part) has somewhere to render them.
   const dbIdToClientId = new Map(quiz.parts.map((p) => [p.id, cid()]));
-  const [parts, setParts] = useState<Part[]>(
-    quiz.parts.length > 0
-      ? quiz.parts.map((p) => ({
-          clientId: dbIdToClientId.get(p.id)!,
-          titleFr: p.titleFr,
-          titleEn: p.titleEn,
-          subtitleFr: p.subtitleFr,
-          subtitleEn: p.subtitleEn,
-        }))
-      : []
-  );
+  const hasUnparted = quiz.questions.some((q) => !q.partId);
+  const defaultPartClientId = hasUnparted ? cid() : null;
+
+  const [parts, setParts] = useState<Part[]>(() => {
+    const existing = quiz.parts.map((p) => ({
+      clientId: dbIdToClientId.get(p.id)!,
+      titleFr: p.titleFr,
+      titleEn: p.titleEn,
+      subtitleFr: p.subtitleFr,
+      subtitleEn: p.subtitleEn,
+    }));
+    if (defaultPartClientId) {
+      existing.unshift({
+        clientId: defaultPartClientId,
+        titleFr: "Part 1",
+        titleEn: null,
+        subtitleFr: null,
+        subtitleEn: null,
+      });
+    }
+    return existing;
+  });
+
   const [questions, setQuestions] = useState<Question[]>(
     quiz.questions.length > 0
       ? quiz.questions.map((q) => ({
           clientId: cid(),
-          partClientId: q.partId ? dbIdToClientId.get(q.partId) ?? null : null,
+          partClientId: q.partId
+            ? dbIdToClientId.get(q.partId) ?? null
+            : defaultPartClientId,
           skillTag: q.skillTag,
           textFr: q.textFr,
           textEn: q.textEn,
@@ -163,7 +177,7 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
             options: fu.options,
           })),
         }))
-      : [emptyQuestion(null)]
+      : []
   );
 
   const [busy, setBusy] = useState(false);
@@ -190,12 +204,70 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
       )
     );
   }
-  function moveQ(i: number, delta: number) {
+
+  function moveQWithinPart(i: number, delta: number) {
     setQuestions((qs) => {
-      const j = i + delta;
-      if (j < 0 || j >= qs.length) return qs;
+      const q = qs[i];
+      if (!q) return qs;
+      const sameIdx: number[] = [];
+      qs.forEach((qq, idx) => {
+        if (qq.partClientId === q.partClientId) sameIdx.push(idx);
+      });
+      const posInPart = sameIdx.indexOf(i);
+      const targetPos = posInPart + delta;
+      if (targetPos < 0 || targetPos >= sameIdx.length) return qs;
+      const j = sameIdx[targetPos];
       const next = qs.slice();
       [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+
+  function addOption(qi: number) {
+    setQuestions((qs) =>
+      qs.map((q, idx) => {
+        if (idx !== qi) return q;
+        if (q.options.length >= 10) return q;
+        const nextLetter = LETTERS[q.options.length];
+        return {
+          ...q,
+          options: [
+            ...q.options,
+            { letter: nextLetter, textFr: "", isCorrect: false },
+          ],
+        };
+      })
+    );
+  }
+
+  function removeOption(qi: number, oi: number) {
+    setQuestions((qs) =>
+      qs.map((q, idx) => {
+        if (idx !== qi) return q;
+        if (q.options.length <= 2) return q;
+        const filtered = q.options.filter((_, oj) => oj !== oi);
+        const relettered = filtered.map((o, k) => ({ ...o, letter: LETTERS[k] }));
+        // If we removed the correct option, default to the first remaining.
+        if (!relettered.some((o) => o.isCorrect) && relettered[0]) {
+          relettered[0] = { ...relettered[0], isCorrect: true };
+        }
+        return { ...q, options: relettered };
+      })
+    );
+  }
+
+  function addQuestionToPart(partClientId: string) {
+    setQuestions((qs) => {
+      // Insert the new question right after the last existing question in
+      // this part, so the global flat order keeps part-grouping intact.
+      const newQ = emptyQuestion(partClientId);
+      let lastIdx = -1;
+      qs.forEach((q, idx) => {
+        if (q.partClientId === partClientId) lastIdx = idx;
+      });
+      if (lastIdx === -1) return [...qs, newQ];
+      const next = qs.slice();
+      next.splice(lastIdx + 1, 0, newQ);
       return next;
     });
   }
@@ -276,352 +348,508 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6 pb-24">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{s["edit.title"]}</h1>
-        <p className="mt-1 text-sm text-slate-500">{s["edit.subtitle"]}</p>
+    <div style={{ paddingBottom: 96 }}>
+      {/* Page header: title + status + publish */}
+      <div className="section-head" style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="row" style={{ gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <span className="eyebrow">{s["edit.title"]}</span>
+            <span className={`badge ${isPublished ? "badge--published" : "badge--draft"}`}>
+              <span className="dot" />
+              {isPublished ? s["dash.published"] : s["dash.draft"]}
+            </span>
+          </div>
+          <input
+            className="input"
+            value={titleFr}
+            onChange={(e) => setTitleFr(e.target.value)}
+            placeholder={s["quiz.titleFr"]}
+            style={{
+              background: "transparent",
+              border: "1px solid transparent",
+              padding: "4px 8px",
+              fontFamily: "var(--font-display)",
+              fontWeight: 700,
+              fontSize: 36,
+              letterSpacing: "-0.02em",
+            }}
+          />
+        </div>
+        <div className="row" style={{ flexShrink: 0 }}>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => setIsPublished((v) => !v)}
+            aria-pressed={isPublished}
+          >
+            {isPublished ? s["dash.draft"] : s["dash.published"]}
+          </button>
+          <button
+            className="btn btn--solid btn--sm"
+            onClick={save}
+            disabled={busy}
+          >
+            {busy ? (
+              <span className="row" style={{ gap: 8 }}>
+                <Spinner size={16} /> {s["edit.saving"]}
+              </span>
+            ) : (
+              s["edit.save"]
+            )}
+          </button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{s["edit.metadata"]}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="titleFr">{s["quiz.titleFr"]}</Label>
-              <Input id="titleFr" value={titleFr} onChange={(e) => setTitleFr(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="titleEn">{s["quiz.titleEn"]}</Label>
-              <Input id="titleEn" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="pub"
-              checked={isPublished}
-              onCheckedChange={(v) => setIsPublished(!!v)}
-            />
-            <Label htmlFor="pub" className="cursor-pointer text-sm font-normal">
-              {s["edit.published"]}
-            </Label>
-          </div>
-          <div className="text-xs text-slate-500">
-            {s["edit.studentLink"]} <code className="rounded bg-slate-100 px-1 py-0.5">/q/{quiz.slug}</code>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="col" style={{ gap: 16 }}>
+        {/* Student link card */}
+        <div className="card row" style={{ flexWrap: "wrap", gap: 12 }}>
+          <span className="field__label" style={{ whiteSpace: "nowrap" }}>
+            {s["share.linkLabel"] ?? "Student link"}
+          </span>
+          <input
+            className="input"
+            readOnly
+            value={studentUrl}
+            onFocus={(e) => e.currentTarget.select()}
+            disabled={!isPublished}
+            style={{ flex: 1, minWidth: 200, opacity: isPublished ? 1 : 0.5 }}
+          />
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={copyLink}
+            disabled={!isPublished}
+            title={!isPublished ? s["share.warning"] : undefined}
+          >
+            {copied ? s["share.copied"] : s["share.copy"]}
+          </button>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{s["edit.prelim.title"]}</CardTitle>
-          <CardDescription>{s["edit.prelim.desc"]}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Badge (FR)</Label>
-              <Input
-                value={prelim.badgeFr}
-                onChange={(e) => setPrelim({ ...prelim, badgeFr: e.target.value })}
-                placeholder="Activité préliminaire"
-              />
+        {/* Intro activity (collapsible) */}
+        <div className="card" style={{ padding: 0 }}>
+          <button
+            type="button"
+            onClick={() => setPrelimOpen((v) => !v)}
+            className="row"
+            style={{
+              width: "100%",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              padding: "18px 22px",
+              textAlign: "left",
+            }}
+          >
+            <div>
+              <div className="h4">{s["edit.prelim.title"]}</div>
+              <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                {s["edit.prelim.desc"]}
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Badge (EN)</Label>
-              <Input
-                value={prelim.badgeEn}
-                onChange={(e) => setPrelim({ ...prelim, badgeEn: e.target.value })}
-              />
+            <span className="icon-btn" style={{ flexShrink: 0 }}>{prelimOpen ? "▴" : "▾"}</span>
+          </button>
+          {prelimOpen && (
+            <div style={{ padding: "0 22px 22px" }}>
+              <div className="divider" style={{ margin: "0 0 18px" }} />
+              <div className="field">
+                <label className="field__label">{s["edit.prelim.intoTitle"]}</label>
+                <input
+                  className="input"
+                  value={prelim.titleFr}
+                  onChange={(e) => setPrelim({ ...prelim, titleFr: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="field__label">{s["edit.prelim.intoDesc"]}</label>
+                <textarea
+                  className="textarea"
+                  rows={2}
+                  value={prelim.descFr}
+                  onChange={(e) => setPrelim({ ...prelim, descFr: e.target.value })}
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label className="field__label">{s["edit.prelim.intoUrl"]}</label>
+                <input
+                  className="input"
+                  value={prelim.url}
+                  onChange={(e) => setPrelim({ ...prelim, url: e.target.value })}
+                  placeholder="https://www.geogebra.org/m/..."
+                />
+              </div>
             </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Titre (FR)</Label>
-              <Input
-                value={prelim.titleFr}
-                onChange={(e) => setPrelim({ ...prelim, titleFr: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Titre (EN)</Label>
-              <Input
-                value={prelim.titleEn}
-                onChange={(e) => setPrelim({ ...prelim, titleEn: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Description (FR)</Label>
-            <Textarea
-              rows={2}
-              value={prelim.descFr}
-              onChange={(e) => setPrelim({ ...prelim, descFr: e.target.value })}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Description (EN)</Label>
-            <Textarea
-              rows={2}
-              value={prelim.descEn}
-              onChange={(e) => setPrelim({ ...prelim, descEn: e.target.value })}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label>Lien plein écran (URL)</Label>
-              <Input
-                value={prelim.url}
-                onChange={(e) => setPrelim({ ...prelim, url: e.target.value })}
-                placeholder="https://www.geogebra.org/m/..."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>URL d&apos;intégration (iframe)</Label>
-              <Input
-                value={prelim.embedUrl}
-                onChange={(e) => setPrelim({ ...prelim, embedUrl: e.target.value })}
-                placeholder="https://www.geogebra.org/classic/...?embed"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{s["edit.parts.title"]}</CardTitle>
-          <CardDescription>{s["edit.parts.desc"]}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {parts.map((p, i) => (
-            <div key={p.clientId} className="rounded-md border p-3">
-              <div className="mb-3 flex items-center gap-2">
-                <strong className="flex-1 text-sm">{s["edit.part"]} {i + 1}</strong>
-                <Button size="sm" variant="outline" onClick={() => moveP(i, -1)} disabled={i === 0}>↑</Button>
-                <Button size="sm" variant="outline" onClick={() => moveP(i, 1)} disabled={i === parts.length - 1}>↓</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
+        {parts.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-state__icon">📝</div>
+            <div className="muted">{s["edit.noPartsHint"]}</div>
+          </div>
+        )}
+
+        {parts.map((p, pi) => {
+          const partQuestions: { q: Question; globalIdx: number }[] = [];
+          questions.forEach((qq, idx) => {
+            if (qq.partClientId === p.clientId)
+              partQuestions.push({ q: qq, globalIdx: idx });
+          });
+
+          return (
+            <div className="card col" key={p.clientId} style={{ gap: 14 }}>
+              {/* Part header */}
+              <div className="row" style={{ flexWrap: "wrap" }}>
+                <span className="badge badge--accent">
+                  {s["edit.part"]} {pi + 1}
+                </span>
+                <div className="spacer" />
+                <button
+                  className="icon-btn"
+                  title="↑"
+                  onClick={() => moveP(pi, -1)}
+                  disabled={pi === 0}
+                  style={{ opacity: pi === 0 ? 0.4 : 1 }}
+                >
+                  ↑
+                </button>
+                <button
+                  className="icon-btn"
+                  title="↓"
+                  onClick={() => moveP(pi, 1)}
+                  disabled={pi === parts.length - 1}
+                  style={{ opacity: pi === parts.length - 1 ? 0.4 : 1 }}
+                >
+                  ↓
+                </button>
+                <button
+                  className="icon-btn icon-btn--danger"
+                  title={s["edit.delete"]}
                   onClick={() => {
+                    if (
+                      partQuestions.length > 0 &&
+                      !window.confirm(
+                        `This part has ${partQuestions.length} question(s). Delete the part and all its questions?`
+                      )
+                    )
+                      return;
                     setQuestions((qs) =>
-                      qs.map((q) => (q.partClientId === p.clientId ? { ...q, partClientId: null } : q))
+                      qs.filter((qq) => qq.partClientId !== p.clientId)
                     );
-                    setParts((ps) => ps.filter((_, idx) => idx !== i));
+                    setParts((ps) => ps.filter((_, idx) => idx !== pi));
                   }}
                 >
-                  {s["edit.delete"]}
-                </Button>
+                  ✕
+                </button>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label>Titre (FR)</Label>
-                  <Input
+
+              {/* Part fields */}
+              <div className="grid grid--2">
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field__label">{s["edit.partTitle"]}</label>
+                  <input
+                    className="input"
                     value={p.titleFr}
                     onChange={(e) =>
-                      setParts(parts.map((pp, idx) => (idx === i ? { ...pp, titleFr: e.target.value } : pp)))
+                      setParts(
+                        parts.map((pp, idx) =>
+                          idx === pi ? { ...pp, titleFr: e.target.value } : pp
+                        )
+                      )
                     }
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>Titre (EN)</Label>
-                  <Input
-                    value={p.titleEn ?? ""}
-                    onChange={(e) =>
-                      setParts(parts.map((pp, idx) => (idx === i ? { ...pp, titleEn: e.target.value } : pp)))
-                    }
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Sous-titre (FR)</Label>
-                  <Input
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field__label">{s["edit.partSubtitle"]}</label>
+                  <input
+                    className="input"
                     value={p.subtitleFr ?? ""}
                     onChange={(e) =>
                       setParts(
-                        parts.map((pp, idx) => (idx === i ? { ...pp, subtitleFr: e.target.value } : pp))
-                      )
-                    }
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Sous-titre (EN)</Label>
-                  <Input
-                    value={p.subtitleEn ?? ""}
-                    onChange={(e) =>
-                      setParts(
-                        parts.map((pp, idx) => (idx === i ? { ...pp, subtitleEn: e.target.value } : pp))
+                        parts.map((pp, idx) =>
+                          idx === pi
+                            ? { ...pp, subtitleFr: e.target.value }
+                            : pp
+                        )
                       )
                     }
                   />
                 </div>
               </div>
-            </div>
-          ))}
-          <div>
-            <Button variant="outline" onClick={() => setParts([...parts, emptyPart()])}>
-              {s["edit.addPart"]}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {questions.map((q, i) => (
-        <Card key={q.clientId}>
-          <CardHeader>
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="flex-1">{s["edit.question"]} {i + 1}</CardTitle>
-              <div className="w-56">
-                <Select
-                  value={q.partClientId ?? "__none__"}
-                  onValueChange={(v) => updateQ(i, { partClientId: v === "__none__" ? null : v })}
+              {/* Questions */}
+              {partQuestions.map(({ q, globalIdx: i }, posInPart) => (
+                <div
+                  key={q.clientId}
+                  className="card"
+                  style={{ background: "var(--surface-2)" }}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">{s["edit.noPart"]}</SelectItem>
-                    {parts.map((p, idx) => (
-                      <SelectItem key={p.clientId} value={p.clientId}>
-                        {s["edit.part"]} {idx + 1} : {p.titleFr}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                    <span
+                      style={{
+                        width: 28,
+                        height: 28,
+                        background: "var(--surface-2)",
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {posInPart + 1}
+                    </span>
+                    <span className="h4" style={{ flex: 1 }}>
+                      {s["edit.question"]} {posInPart + 1}
+                    </span>
+                    <button
+                      className="icon-btn"
+                      title="↑"
+                      onClick={() => moveQWithinPart(i, -1)}
+                      disabled={posInPart === 0}
+                      style={{ opacity: posInPart === 0 ? 0.4 : 1 }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="icon-btn"
+                      title="↓"
+                      onClick={() => moveQWithinPart(i, 1)}
+                      disabled={posInPart === partQuestions.length - 1}
+                      style={{ opacity: posInPart === partQuestions.length - 1 ? 0.4 : 1 }}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      className="icon-btn icon-btn--danger"
+                      title={s["edit.delete"]}
+                      onClick={() =>
+                        setQuestions((qs) => qs.filter((_, idx) => idx !== i))
+                      }
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="divider" style={{ margin: "0 0 16px" }} />
+                  <QuestionBody
+                    q={q}
+                    i={i}
+                    s={s}
+                    updateQ={updateQ}
+                    updateOpt={updateOpt}
+                    setCorrect={setCorrect}
+                    addOption={addOption}
+                    removeOption={removeOption}
+                  />
+                </div>
+              ))}
+
+              <div>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => addQuestionToPart(p.clientId)}
+                >
+                  {s["edit.addQuestionToPart"]}
+                </button>
               </div>
-              <Button size="sm" variant="outline" onClick={() => moveQ(i, -1)} disabled={i === 0}>↑</Button>
-              <Button size="sm" variant="outline" onClick={() => moveQ(i, 1)} disabled={i === questions.length - 1}>↓</Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setQuestions((qs) => qs.filter((_, idx) => idx !== i))}
-              >
-                Supprimer
-              </Button>
             </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label>{s["edit.statement.fr"]}</Label>
-              <Textarea
-                rows={2}
-                value={q.textFr}
-                onChange={(e) => updateQ(i, { textFr: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>{s["edit.statement.en"]}</Label>
-              <Textarea
-                rows={2}
-                value={q.textEn ?? ""}
-                onChange={(e) => updateQ(i, { textEn: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>{s["edit.hint"]}</Label>
-                <Input value={q.hintFr ?? ""} onChange={(e) => updateQ(i, { hintFr: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>{s["edit.skill"]}</Label>
-                <Input
-                  value={q.skillTag ?? ""}
-                  onChange={(e) => updateQ(i, { skillTag: e.target.value })}
-                  placeholder="ex: congruence_def"
-                />
-              </div>
-            </div>
+          );
+        })}
 
-            <Separator />
-            <div className="text-xs font-semibold uppercase text-slate-500">
-              {s["edit.options"]}
-            </div>
-            {q.options.map((o, j) => (
-              <div key={j} className="grid grid-cols-[24px_1fr_1fr] items-center gap-2">
-                <input
-                  type="radio"
-                  checked={o.isCorrect}
-                  onChange={() => setCorrect(i, j)}
-                  className="h-4 w-4"
-                />
-                <Input
-                  placeholder={`${o.letter} (FR)`}
-                  value={o.textFr}
-                  onChange={(e) => updateOpt(i, j, { textFr: e.target.value })}
-                />
-                <Input
-                  placeholder={`${o.letter} (EN)`}
-                  value={o.textEn ?? ""}
-                  onChange={(e) => updateOpt(i, j, { textEn: e.target.value })}
-                />
-              </div>
-            ))}
+        <div>
+          <button
+            className="btn btn--ghost btn--sm"
+            onClick={() => setParts([...parts, emptyPart()])}
+          >
+            {s["edit.addPart"]}
+          </button>
+        </div>
 
-            <div className="grid gap-2">
-              <Label>{s["edit.explanation.fr"]}</Label>
-              <Textarea
-                rows={2}
-                value={q.explanationFr}
-                onChange={(e) => updateQ(i, { explanationFr: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>{s["edit.explanation.en"]}</Label>
-              <Textarea
-                rows={2}
-                value={q.explanationEn ?? ""}
-                onChange={(e) => updateQ(i, { explanationEn: e.target.value })}
-              />
-            </div>
-
-            <RemediationEditor
-              s={s}
-              value={q.remediation ?? null}
-              onChange={(rm) => updateQ(i, { remediation: rm })}
-            />
-
-            {q.remediation && (
-              <FollowUpsEditor
-                s={s}
-                followUps={q.followUps}
-                onChange={(fus) => updateQ(i, { followUps: fus })}
-              />
-            )}
-          </CardContent>
-        </Card>
-      ))}
-
-      <div>
-        <Button
-          variant="outline"
-          onClick={() =>
-            setQuestions((qs) => [
-              ...qs,
-              emptyQuestion(parts[parts.length - 1]?.clientId ?? null),
-            ])
-          }
-        >
-          {s["edit.addQuestion"]}
-        </Button>
+        {msg && (
+          <div
+            className="card"
+            style={{
+              borderColor:
+                msg.kind === "ok"
+                  ? "rgba(34,197,94,0.4)"
+                  : "rgba(239,68,68,0.4)",
+              background:
+                msg.kind === "ok" ? "var(--success-bg)" : "var(--danger-bg)",
+              color: msg.kind === "ok" ? "#86efac" : "#fca5a5",
+            }}
+          >
+            {msg.text}
+          </div>
+        )}
       </div>
 
-      {msg && (
-        <Alert variant={msg.kind === "ok" ? "default" : "destructive"}>
-          <AlertDescription>{msg.text}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="sticky bottom-0 -mx-8 border-t bg-background/90 px-8 py-3 backdrop-blur">
-        <Button onClick={save} disabled={busy} className="h-11 bg-slate-900 px-6 text-sm font-medium text-white shadow-sm hover:bg-slate-800">
+      {/* Sticky save bar */}
+      <div
+        style={{
+          position: "sticky",
+          bottom: 24,
+          marginTop: 24,
+          background: "rgba(10, 25, 54, 0.85)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: "1px solid var(--border-strong)",
+          borderRadius: "var(--radius-lg)",
+          padding: "12px 16px",
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          zIndex: 5,
+        }}
+      >
+        <span className="muted" style={{ fontSize: 13 }}>
+          {msg?.kind === "ok" ? s["edit.saved"] : s["edit.subtitle"]}
+        </span>
+        <div className="spacer" />
+        <button className="btn btn--solid btn--sm" onClick={save} disabled={busy}>
           {busy ? (
-            <span className="inline-flex items-center gap-2">
+            <span className="row" style={{ gap: 8 }}>
               <Spinner size={16} /> {s["edit.saving"]}
             </span>
           ) : (
             s["edit.save"]
           )}
-        </Button>
+        </button>
       </div>
+    </div>
+  );
+}
+
+function QuestionBody({
+  q,
+  i,
+  s,
+  updateQ,
+  updateOpt,
+  setCorrect,
+  addOption,
+  removeOption,
+}: {
+  q: Question;
+  i: number;
+  s: Record<string, string>;
+  updateQ: (i: number, patch: Partial<Question>) => void;
+  updateOpt: (i: number, j: number, patch: Partial<Option>) => void;
+  setCorrect: (i: number, j: number) => void;
+  addOption: (qi: number) => void;
+  removeOption: (qi: number, oi: number) => void;
+}) {
+  return (
+    <div>
+      <div className="field">
+        <label className="field__label">{s["edit.statement.fr"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={q.textFr}
+          onChange={(e) => updateQ(i, { textFr: e.target.value })}
+        />
+      </div>
+      <div className="grid grid--2">
+        <div className="field">
+          <label className="field__label">{s["edit.hint"]}</label>
+          <input
+            className="input"
+            value={q.hintFr ?? ""}
+            onChange={(e) => updateQ(i, { hintFr: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label className="field__label">{s["edit.skill"]}</label>
+          <input
+            className="input"
+            value={q.skillTag ?? ""}
+            onChange={(e) => updateQ(i, { skillTag: e.target.value })}
+            placeholder="ex: congruence_def"
+          />
+        </div>
+      </div>
+
+      <div className="field">
+        <label className="field__label">{s["edit.options"]}</label>
+        {q.options.map((o, j) => (
+          <div className="row" key={j} style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => setCorrect(i, j)}
+              title={s["edit.options"]}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                fontSize: 12,
+                flexShrink: 0,
+                background: o.isCorrect ? "var(--success)" : "var(--surface-2)",
+                color: o.isCorrect ? "#03260f" : "#fff",
+              }}
+            >
+              {o.isCorrect ? "✓" : o.letter}
+            </button>
+            <input
+              className="input"
+              placeholder={o.letter}
+              value={o.textFr}
+              onChange={(e) => updateOpt(i, j, { textFr: e.target.value })}
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              className="icon-btn icon-btn--danger"
+              onClick={() => removeOption(i, j)}
+              disabled={q.options.length <= 2}
+              title={
+                q.options.length <= 2
+                  ? "Minimum 2 options"
+                  : (s["edit.removeOption"] ?? "Remove")
+              }
+              style={{ opacity: q.options.length <= 2 ? 0.4 : 1 }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          onClick={() => addOption(i)}
+          disabled={q.options.length >= 10}
+          style={{ marginTop: 2 }}
+        >
+          {s["edit.addOption"]}
+        </button>
+      </div>
+
+      <div className="field">
+        <label className="field__label">{s["edit.explanation.fr"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={q.explanationFr}
+          onChange={(e) => updateQ(i, { explanationFr: e.target.value })}
+        />
+      </div>
+
+      <RemediationEditor
+        s={s}
+        value={q.remediation ?? null}
+        onChange={(rm) => updateQ(i, { remediation: rm })}
+      />
+
+      {q.remediation && (
+        <FollowUpsEditor
+          s={s}
+          followUps={q.followUps}
+          onChange={(fus) => updateQ(i, { followUps: fus })}
+        />
+      )}
     </div>
   );
 }
@@ -637,54 +865,59 @@ function RemediationEditor({
 }) {
   if (!value) {
     return (
-      <div>
-        <Button variant="outline" onClick={() => onChange({ explanationFr: "" })}>
+      <div className="field" style={{ marginBottom: 18 }}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          onClick={() => onChange({ explanationFr: "" })}
+        >
           {s["edit.addRemed"]}
-        </Button>
+        </button>
       </div>
     );
   }
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <strong className="text-sm text-amber-900">{s["edit.remed.title"]}</strong>
-        <Button size="sm" variant="outline" onClick={() => onChange(null)}>
-          {s["edit.delete"]}
-        </Button>
+    <div
+      className="card"
+      style={{ background: "rgba(0,0,0,0.18)", marginBottom: 18 }}
+    >
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+        <span className="badge badge--accent">{s["edit.remed.title"]}</span>
+        <button
+          type="button"
+          className="icon-btn icon-btn--danger"
+          title={s["edit.delete"]}
+          onClick={() => onChange(null)}
+        >
+          ✕
+        </button>
       </div>
-      <div className="flex flex-col gap-3">
-        <div className="grid gap-2">
-          <Label>{s["edit.remed.detailFr"]}</Label>
-          <Textarea
-            rows={2}
-            value={value.explanationFr}
-            onChange={(e) => onChange({ ...value, explanationFr: e.target.value })}
+      <div className="field">
+        <label className="field__label">{s["edit.remed.detailFr"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={value.explanationFr}
+          onChange={(e) => onChange({ ...value, explanationFr: e.target.value })}
+        />
+      </div>
+      <div className="grid grid--2">
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label className="field__label">{s["edit.remed.videoUrl"]}</label>
+          <input
+            className="input"
+            value={value.videoUrl ?? ""}
+            onChange={(e) => onChange({ ...value, videoUrl: e.target.value })}
+            placeholder="https://youtube.com/..."
           />
         </div>
-        <div className="grid gap-2">
-          <Label>{s["edit.remed.detailEn"]}</Label>
-          <Textarea
-            rows={2}
-            value={value.explanationEn ?? ""}
-            onChange={(e) => onChange({ ...value, explanationEn: e.target.value })}
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label className="field__label">{s["edit.remed.videoTitle"]}</label>
+          <input
+            className="input"
+            value={value.videoTitle ?? ""}
+            onChange={(e) => onChange({ ...value, videoTitle: e.target.value })}
           />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-2">
-            <Label>{s["edit.remed.videoUrl"]}</Label>
-            <Input
-              value={value.videoUrl ?? ""}
-              onChange={(e) => onChange({ ...value, videoUrl: e.target.value })}
-              placeholder="https://youtube.com/..."
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>{s["edit.remed.videoTitle"]}</Label>
-            <Input
-              value={value.videoTitle ?? ""}
-              onChange={(e) => onChange({ ...value, videoTitle: e.target.value })}
-            />
-          </div>
         </div>
       </div>
     </div>
@@ -701,107 +934,102 @@ function FollowUpsEditor({
   s: Record<string, string>;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="text-xs font-semibold uppercase text-slate-500">
-        {s["edit.followups"]}
-      </div>
+    <div className="field" style={{ marginBottom: 0 }}>
+      <label className="field__label">{s["edit.followups"]}</label>
       {followUps.map((fu, k) => (
-        <div key={k} className="rounded-md border bg-card p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <strong className="text-sm">{s["edit.followup"]} {k + 1}</strong>
-            <Button
-              size="sm"
-              variant="outline"
+        <div
+          key={k}
+          className="card"
+          style={{ background: "rgba(0,0,0,0.18)", marginBottom: 10 }}
+        >
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+            <span className="badge badge--accent">
+              {s["edit.followup"]} {k + 1}
+            </span>
+            <button
+              type="button"
+              className="icon-btn icon-btn--danger"
+              title={s["edit.delete"]}
               onClick={() => onChange(followUps.filter((_, x) => x !== k))}
             >
-              {s["edit.delete"]}
-            </Button>
+              ✕
+            </button>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="grid gap-2">
-              <Label>{s["edit.statement.fr"]}</Label>
-              <Textarea
-                rows={2}
-                value={fu.textFr}
-                onChange={(e) =>
-                  onChange(followUps.map((f, x) => (x === k ? { ...f, textFr: e.target.value } : f)))
+          <div className="field">
+            <label className="field__label">{s["edit.statement.fr"]}</label>
+            <textarea
+              className="textarea"
+              rows={2}
+              value={fu.textFr}
+              onChange={(e) =>
+                onChange(followUps.map((f, x) => (x === k ? { ...f, textFr: e.target.value } : f)))
+              }
+            />
+          </div>
+          {fu.options.map((o, j) => (
+            <div className="row" key={j} style={{ marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange(
+                    followUps.map((f, x) =>
+                      x === k
+                        ? {
+                            ...f,
+                            options: f.options.map((oo, oi) => ({ ...oo, isCorrect: oi === j })),
+                          }
+                        : f
+                    )
+                  )
                 }
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  flexShrink: 0,
+                  background: o.isCorrect ? "var(--success)" : "var(--surface-2)",
+                  color: o.isCorrect ? "#03260f" : "#fff",
+                }}
+              >
+                {o.isCorrect ? "✓" : o.letter}
+              </button>
+              <input
+                className="input"
+                placeholder={o.letter}
+                value={o.textFr}
+                onChange={(e) =>
+                  onChange(
+                    followUps.map((f, x) =>
+                      x === k
+                        ? {
+                            ...f,
+                            options: f.options.map((oo, oi) =>
+                              oi === j ? { ...oo, textFr: e.target.value } : oo
+                            ),
+                          }
+                        : f
+                    )
+                  )
+                }
+                style={{ flex: 1 }}
               />
             </div>
-            <div className="grid gap-2">
-              <Label>{s["edit.statement.en"]}</Label>
-              <Textarea
-                rows={2}
-                value={fu.textEn ?? ""}
-                onChange={(e) =>
-                  onChange(followUps.map((f, x) => (x === k ? { ...f, textEn: e.target.value } : f)))
-                }
-              />
-            </div>
-            {fu.options.map((o, j) => (
-              <div key={j} className="grid grid-cols-[24px_1fr_1fr] items-center gap-2">
-                <input
-                  type="radio"
-                  checked={o.isCorrect}
-                  onChange={() =>
-                    onChange(
-                      followUps.map((f, x) =>
-                        x === k
-                          ? {
-                              ...f,
-                              options: f.options.map((oo, oi) => ({ ...oo, isCorrect: oi === j })),
-                            }
-                          : f
-                      )
-                    )
-                  }
-                  className="h-4 w-4"
-                />
-                <Input
-                  placeholder={`${o.letter} (FR)`}
-                  value={o.textFr}
-                  onChange={(e) =>
-                    onChange(
-                      followUps.map((f, x) =>
-                        x === k
-                          ? {
-                              ...f,
-                              options: f.options.map((oo, oi) =>
-                                oi === j ? { ...oo, textFr: e.target.value } : oo
-                              ),
-                            }
-                          : f
-                      )
-                    )
-                  }
-                />
-                <Input
-                  placeholder={`${o.letter} (EN)`}
-                  value={o.textEn ?? ""}
-                  onChange={(e) =>
-                    onChange(
-                      followUps.map((f, x) =>
-                        x === k
-                          ? {
-                              ...f,
-                              options: f.options.map((oo, oi) =>
-                                oi === j ? { ...oo, textEn: e.target.value } : oo
-                              ),
-                            }
-                          : f
-                      )
-                    )
-                  }
-                />
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       ))}
       <div>
-        <Button variant="outline" onClick={() => onChange([...followUps, emptyFollowUp()])}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          onClick={() => onChange([...followUps, emptyFollowUp()])}
+        >
           {s["edit.addFollowup"]}
-        </Button>
+        </button>
       </div>
     </div>
   );

@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
-import { cn } from "@/lib/utils";
+import { Inter, Lexend } from "next/font/google";
+import { getLang } from "@/lib/lang";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans-google",
+});
+const lexend = Lexend({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-display-google",
+});
 
 export const metadata: Metadata = {
-  title: "e-school",
-  description: "Quizzes and mastery fiches for students.",
+  title: "ICE Learning — Learn at your own pace",
+  description: "Adaptive learning platform for science and mathematics.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const lang = await getLang();
   return (
-    <html lang="fr" className={cn("font-sans", inter.variable)}>
+    <html lang={lang} className={`${inter.variable} ${lexend.variable}`}>
       <body>{children}</body>
     </html>
   );

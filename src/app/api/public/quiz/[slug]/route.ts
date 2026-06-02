@@ -49,8 +49,8 @@ export async function GET(
   return NextResponse.json({
     slug: quiz.slug,
     title: t(quiz.titleFr, quiz.titleEn),
-    subject: quiz.subject.name,
-    grade: quiz.grade.name,
+    subject: t(quiz.subject.nameFr, quiz.subject.nameEn),
+    grade: t(quiz.grade.nameFr, quiz.grade.nameEn),
     parts: quiz.parts.map((p) => ({
       id: p.id,
       order: p.order,

@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
 
+/**
+ * Tiny inline spinner for in-button busy states (e.g. "Saving…").
+ * Page/route loading uses skeletons (see components/Skeleton.tsx), never a
+ * centered spinner.
+ */
 export function Spinner({
   className,
   size = 16,
@@ -23,27 +28,5 @@ export function Spinner({
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
-  );
-}
-
-export function PageSpinner({ label }: { label?: string }) {
-  return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="flex items-center gap-3 text-slate-500">
-        <Spinner size={20} />
-        {label && <span className="text-sm">{label}</span>}
-      </div>
-    </div>
-  );
-}
-
-export function FullPageSpinner({ label }: { label?: string }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <div className="flex items-center gap-3 text-slate-500">
-        <Spinner size={22} />
-        {label && <span className="text-sm">{label}</span>}
-      </div>
-    </div>
   );
 }

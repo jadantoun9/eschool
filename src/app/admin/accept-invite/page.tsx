@@ -2,20 +2,19 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { dict, type Lang } from "@/lib/i18n";
 import { Spinner } from "@/components/Spinner";
-
-const inputCls =
-  "h-11 border-slate-200 text-sm focus-visible:border-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900/10";
 
 function readLangCookie(): Lang {
   if (typeof document === "undefined") return "en";
   const m = document.cookie.match(/(?:^|;\s*)lang=(en|fr)/);
   return (m?.[1] as Lang) ?? "en";
+}
+
+function strengthColor(strength: number): string {
+  if (strength === 1) return "var(--danger)";
+  if (strength === 2) return "var(--warning)";
+  return "var(--success)";
 }
 
 function AcceptInner() {
@@ -24,11 +23,14 @@ function AcceptInner() {
   const token = sp.get("token") ?? "";
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lang, setLang] = useState<Lang>("en");
   useEffect(() => setLang(readLangCookie()), []);
   const s = dict[lang];
+
+  const strength = pw.length === 0 ? 0 : pw.length < 6 ? 1 : pw.length < 10 ? 2 : 3;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,63 +55,162 @@ function AcceptInner() {
 
   if (!token) {
     return (
-      <Alert variant="destructive">
-        <AlertDescription>{s["invite.invalidLink"]}</AlertDescription>
-      </Alert>
+      <div className="invite">
+        <div className="invite__card">
+          <p className="field__error" style={{ textAlign: "center", fontSize: 14 }}>
+            {s["invite.invalidLink"]}
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+    <div className="invite">
+      <div className="invite__card">
+        {/* Title */}
+        <h1
+          className="h2"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: 28,
+            letterSpacing: "-0.015em",
+            textAlign: "center",
+            marginBottom: 6,
+          }}
+        >
           {s["invite.title"]}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">{s["invite.subtitle"]}</p>
-      </div>
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <form onSubmit={submit} className="flex flex-col gap-5">
-          <div className="grid gap-2">
-            <Label htmlFor="pw" className="text-sm font-medium text-slate-700">
-              {s["invite.password"]}
-            </Label>
-            <Input
-              id="pw"
+        <p className="muted" style={{ textAlign: "center", marginBottom: 28, fontSize: 14 }}>
+          {s["invite.subtitle"]}
+        </p>
+
+        <form onSubmit={submit}>
+          {/* Password */}
+          <div className="field">
+            <label className="field__label">{s["invite.password"]}</label>
+            <input
+              className="input"
               type="password"
               required
               minLength={8}
               value={pw}
               onChange={(e) => setPw(e.target.value)}
-              className={inputCls}
             />
+            {strength > 0 && (
+              <>
+                <div className="invite__strength">
+                  {[1, 2, 3].map((n) => (
+                    <span
+                      key={n}
+                      style={{
+                        background:
+                          n <= strength ? strengthColor(strength) : "rgba(255,255,255,0.08)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <span className="field__hint">
+                  {strength === 1 &&
+                    (lang === "fr"
+                      ? "Trop court — au moins 10 caractères"
+                      : "Too short — at least 10 characters")}
+                  {strength === 2 &&
+                    (lang === "fr"
+                      ? "Correct — ajoute un symbole ou un chiffre"
+                      : "OK — add a symbol or number")}
+                  {strength === 3 && (lang === "fr" ? "Solide" : "Strong")}
+                </span>
+              </>
+            )}
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="pw2" className="text-sm font-medium text-slate-700">
-              {s["invite.confirm"]}
-            </Label>
-            <Input
-              id="pw2"
+
+          {/* Confirm password */}
+          <div className="field">
+            <label className="field__label">{s["invite.confirm"]}</label>
+            <input
+              className="input"
               type="password"
               required
               minLength={8}
               value={pw2}
               onChange={(e) => setPw2(e.target.value)}
-              className={inputCls}
             />
           </div>
+
+          {/* Error */}
           {err && (
-            <Alert variant="destructive">
-              <AlertDescription>{err}</AlertDescription>
-            </Alert>
+            <p className="field__error" style={{ marginBottom: 16, fontSize: 13 }}>
+              {err}
+            </p>
           )}
-          <Button
+
+          {/* Terms checkbox */}
+          <label
+            className="row"
+            style={{
+              gap: 10,
+              alignItems: "flex-start",
+              marginBottom: 20,
+              fontSize: 13,
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              lineHeight: 1.5,
+            }}
+          >
+            <span
+              className={`checkbox${agreed ? " checkbox--checked" : ""}`}
+              style={{ marginTop: 1, flexShrink: 0 }}
+              onClick={() => setAgreed((v) => !v)}
+              role="checkbox"
+              aria-checked={agreed}
+            >
+              {agreed ? "✓" : ""}
+            </span>
+            <span>
+              {lang === "fr" ? (
+                <>
+                  {"J'accepte les "}
+                  <a href="#" style={{ color: "var(--accent)" }}>
+                    conditions
+                  </a>
+                  {" et la "}
+                  <a href="#" style={{ color: "var(--accent)" }}>
+                    politique de confidentialité
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  {"I agree to the "}
+                  <a href="#" style={{ color: "var(--accent)" }}>
+                    terms
+                  </a>
+                  {" and "}
+                  <a href="#" style={{ color: "var(--accent)" }}>
+                    privacy policy
+                  </a>
+                  .
+                </>
+              )}
+            </span>
+          </label>
+
+          <button
             type="submit"
             disabled={busy}
-            className="h-11 w-full bg-slate-900 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
+            className="btn btn--primary btn--block"
           >
             {busy ? <Spinner size={16} /> : s["invite.submit"]}
-          </Button>
+          </button>
         </form>
+
+        <p className="muted" style={{ textAlign: "center", fontSize: 12, marginTop: 18 }}>
+          {lang === "fr"
+            ? "Cette invitation expire dans 7 jours."
+            : "This invite expires in 7 days."}
+        </p>
       </div>
     </div>
   );
@@ -117,13 +218,8 @@ function AcceptInner() {
 
 export default function AcceptInvitePage() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center bg-slate-100 p-6"
-      style={{ fontFamily: "var(--font-sans), Inter, system-ui, sans-serif" }}
-    >
-      <Suspense>
-        <AcceptInner />
-      </Suspense>
-    </div>
+    <Suspense>
+      <AcceptInner />
+    </Suspense>
   );
 }

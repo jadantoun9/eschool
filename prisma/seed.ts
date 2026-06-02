@@ -52,19 +52,33 @@ async function main() {
     create: { email, name, role: "SUPER_ADMIN", passwordHash },
   });
 
-  const grade = await prisma.grade.upsert({
-    where: { name: "Seconde" },
-    update: {},
-    create: { name: "Seconde" },
-  });
+  // Default global subjects (admin-managed).
+  const SUBJECTS = [
+    { slug: "math",      nameFr: "Mathématiques", nameEn: "Mathematics", icon: "📐", colorKey: "math", order: 1 },
+    { slug: "physics",   nameFr: "Physique",       nameEn: "Physics",    icon: "⚡",  colorKey: "phys", order: 2 },
+    { slug: "chemistry", nameFr: "Chimie",         nameEn: "Chemistry",  icon: "🧪", colorKey: "chem", order: 3 },
+    { slug: "biology",   nameFr: "Biologie",       nameEn: "Biology",    icon: "🌿", colorKey: "bio",  order: 4 },
+  ];
+  for (const s of SUBJECTS) {
+    await prisma.subject.upsert({ where: { slug: s.slug }, update: s, create: s });
+  }
 
-  const subject =
-    (await prisma.subject.findFirst({
-      where: { name: "Mathématiques", teacherId: admin.id },
-    })) ??
-    (await prisma.subject.create({
-      data: { name: "Mathématiques", teacherId: admin.id },
-    }));
+  // Default global grades (6e → Terminale).
+  const GRADES = [
+    { slug: "6",  nameFr: "6ème",      nameEn: "Grade 6",  order: 1 },
+    { slug: "7",  nameFr: "5ème",      nameEn: "Grade 7",  order: 2 },
+    { slug: "8",  nameFr: "4ème",      nameEn: "Grade 8",  order: 3 },
+    { slug: "9",  nameFr: "3ème",      nameEn: "Grade 9",  order: 4 },
+    { slug: "10", nameFr: "Seconde",   nameEn: "Grade 10", order: 5 },
+    { slug: "11", nameFr: "Première",  nameEn: "Grade 11", order: 6 },
+    { slug: "12", nameFr: "Terminale", nameEn: "Grade 12", order: 7 },
+  ];
+  for (const g of GRADES) {
+    await prisma.grade.upsert({ where: { slug: g.slug }, update: g, create: g });
+  }
+
+  const grade = await prisma.grade.findUniqueOrThrow({ where: { slug: "10" } });
+  const subject = await prisma.subject.findUniqueOrThrow({ where: { slug: "math" } });
 
   // Re-seedable: wipe the previous sample quiz so changes to the HTML/QB
   // source are picked up cleanly. Cascades remove questions/options/etc.

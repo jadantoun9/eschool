@@ -13,28 +13,33 @@ enum Role {
 }
 
 model Teacher {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   passwordHash String?
   name         String
-  role         Role      @default(TEACHER)
-  inviteToken  String?   @unique
-  subjects     Subject[]
+  role         Role     @default(TEACHER)
+  inviteToken  String?  @unique
   quizzes      Quiz[]
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime @default(now())
 }
 
 model Subject {
-  id        String  @id @default(cuid())
-  name      String
-  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  teacherId String
-  quizzes   Quiz[]
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  nameFr   String
+  nameEn   String
+  icon     String  @default("📚")
+  colorKey String  @default("math")
+  order    Int     @default(0)
+  quizzes  Quiz[]
 }
 
 model Grade {
   id      String @id @default(cuid())
-  name    String @unique
+  slug    String @unique
+  nameFr  String
+  nameEn  String
+  order   Int    @default(0)
   quizzes Quiz[]
 }
 
@@ -129,6 +134,8 @@ model Remediation {
   explanationEn String?
   videoUrl      String?
   videoTitle    String?
+  videoUrl2     String?
+  videoTitle2   String?
 }
 
 model Submission {

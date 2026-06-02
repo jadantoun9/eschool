@@ -10,8 +10,34 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
   const session = await auth();
   if (!session?.user) redirect("/admin/login");
   const lang = await getLang();
-  const quiz = await prisma.quiz.findUnique({ where: { id }, select: { slug: true, titleFr: true, isPublished: true, teacherId: true } });
+  const quiz = await prisma.quiz.findUnique({
+    where: { id },
+    select: {
+      slug: true,
+      titleFr: true,
+      titleEn: true,
+      isPublished: true,
+      teacherId: true,
+      subject: { select: { nameFr: true, nameEn: true, icon: true, colorKey: true } },
+      grade: { select: { nameFr: true, nameEn: true } },
+    },
+  });
   if (!quiz) notFound();
   if (session.user.role !== "SUPER_ADMIN" && quiz.teacherId !== session.user.id) notFound();
-  return <ShareClient strings={dict[lang]} slug={quiz.slug} title={quiz.titleFr} isPublished={quiz.isPublished} />;
+  return (
+    <ShareClient
+      strings={dict[lang]}
+      lang={lang}
+      slug={quiz.slug}
+      titleFr={quiz.titleFr}
+      titleEn={quiz.titleEn ?? null}
+      isPublished={quiz.isPublished}
+      subjectNameFr={quiz.subject.nameFr}
+      subjectNameEn={quiz.subject.nameEn}
+      subjectIcon={quiz.subject.icon}
+      subjectColorKey={quiz.subject.colorKey}
+      gradeNameFr={quiz.grade.nameFr}
+      gradeNameEn={quiz.grade.nameEn}
+    />
+  );
 }

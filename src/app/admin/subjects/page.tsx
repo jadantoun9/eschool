@@ -1,35 +1,54 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import SubjectsClient from "./SubjectsClient";
 import { getLang } from "@/lib/lang";
-import { dict, t } from "@/lib/i18n";
+import { dict } from "@/lib/i18n";
+import SubjectsClient from "./SubjectsClient";
 
-export default async function SubjectsPage() {
+export default async function SubjectsAdminPage() {
   const session = await auth();
   if (!session?.user) redirect("/admin/login");
+  if (session.user.role !== "SUPER_ADMIN") redirect("/admin");
   const lang = await getLang();
-  const isSA = session.user.role === "SUPER_ADMIN";
-  const subjects = await prisma.subject.findMany({
-    where: isSA ? {} : { teacherId: session.user.id },
-    orderBy: { name: "asc" },
-    include: { _count: { select: { quizzes: true } } },
-  });
-  const grades = await prisma.grade.findMany({ orderBy: { name: "asc" } });
+
+  const subjects = await prisma.subject.findMany({ orderBy: { order: "asc" } });
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-          {t("subjects.title", lang)}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">{t("subjects.subtitle", lang)}</p>
+    <>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 24,
+          marginBottom: 32,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 14 }}>
+            📚 {lang === "fr" ? "Catalogue" : "Catalogue"}
+          </div>
+          <h1 className="h1" style={{ marginBottom: 6 }}>
+            {lang === "fr" ? "Matières" : "Subjects"}
+          </h1>
+          <p className="muted">
+            {lang === "fr"
+              ? "Les catégories sous lesquelles les fiches sont organisées."
+              : "The top-level categories worksheets are organized under."}
+          </p>
+        </div>
+        <div className="stats">
+          <div className="stat">
+            <div className="stat__num numeric">{subjects.length}</div>
+            <div className="stat__label">
+              {lang === "fr" ? "Matières" : "Subjects"}
+            </div>
+          </div>
+        </div>
       </div>
-      <SubjectsClient
-        strings={dict[lang]}
-        subjects={subjects.map((s) => ({ id: s.id, name: s.name, quizCount: s._count.quizzes }))}
-        grades={grades}
-      />
-    </div>
+
+      <SubjectsClient strings={dict[lang]} lang={lang} subjects={subjects} />
+    </>
   );
 }
