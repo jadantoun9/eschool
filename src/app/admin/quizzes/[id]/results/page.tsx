@@ -83,7 +83,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
         className="muted"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 18 }}
       >
-        ← {lang === "fr" ? "Tableau de bord" : "Dashboard"}
+        ← {t("common.backDashboard", lang)}
       </a>
 
       {/* Page header */}
@@ -102,12 +102,12 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
             {lang === "fr" ? quiz.titleFr : quiz.titleFr}
           </h1>
           <p className="muted">
-            {lang === "fr" ? "Résultats · 30 derniers jours" : "Results · last 30 days"}
+            {t("results.periodSubtitle", lang)}
           </p>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <a href={`/admin/quizzes/${id}/edit`} className="btn btn--ghost btn--sm">
-            {lang === "fr" ? "Modifier" : "Edit quiz"}
+            {t("results.editQuiz", lang)}
           </a>
         </div>
       </div>
@@ -133,7 +133,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               marginBottom: 14,
             }}
           >
-            {lang === "fr" ? "Soumissions" : "Submissions"}
+            {t("results.submissions", lang)}
           </div>
           <div
             className="numeric"
@@ -162,7 +162,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               marginBottom: 14,
             }}
           >
-            {lang === "fr" ? "Score moyen" : "Average score"}
+            {t("results.avgScore", lang)}
           </div>
           <div
             className="numeric"
@@ -192,7 +192,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               marginBottom: 14,
             }}
           >
-            {lang === "fr" ? "Achèvement" : "Completion"}
+            {t("results.completion", lang)}
           </div>
           <div
             className="numeric"
@@ -222,7 +222,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               marginBottom: 14,
             }}
           >
-            {lang === "fr" ? "Questions" : "Questions"}
+            {t("results.questionsLabel", lang)}
           </div>
           <div
             className="numeric"
@@ -263,9 +263,9 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               justifyContent: "space-between",
             }}
           >
-            <span>{lang === "fr" ? "Distribution des scores" : "Score distribution"}</span>
+            <span>{t("results.scoreDistribution", lang)}</span>
             <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-              {submissionCount} {lang === "fr" ? "soumissions" : "submissions"}
+              {submissionCount} {t("results.submissionsLower", lang)}
             </span>
           </div>
           {submissionCount === 0 ? (
@@ -339,7 +339,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               justifyContent: "space-between",
             }}
           >
-            <span>{lang === "fr" ? "Soumissions récentes" : "Recent submissions"}</span>
+            <span>{t("results.recentSubmissions", lang)}</span>
           </div>
           {recentSubs.length === 0 ? (
             <div className="muted" style={{ textAlign: "center", padding: "32px 0", fontSize: 13 }}>
@@ -422,11 +422,9 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               gap: 8,
             }}
           >
-            <span>{lang === "fr" ? "Performance par compétence" : "Per-skill performance"}</span>
+            <span>{t("results.perSkillPerformance", lang)}</span>
             <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-              {lang === "fr"
-                ? "Plus le % est bas, plus la question est difficile"
-                : "Lower % = harder — review the explanation"}
+              {t("results.perSkillHint", lang)}
             </span>
           </div>
 
@@ -445,9 +443,9 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               textTransform: "uppercase",
             }}
           >
-            <span>{lang === "fr" ? "Compétence" : "Skill"}</span>
-            <span style={{ textAlign: "right" }}>{lang === "fr" ? "Correct" : "Correct"}</span>
-            <span style={{ textAlign: "right" }}>{lang === "fr" ? "Taux" : "Rate"}</span>
+            <span>{t("results.skillCol", lang)}</span>
+            <span style={{ textAlign: "right" }}>{t("results.correctCol", lang)}</span>
+            <span style={{ textAlign: "right" }}>{t("results.rateCol", lang)}</span>
           </div>
 
           {[...skillStats.entries()].map(([skill, st], idx, arr) => {

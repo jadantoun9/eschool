@@ -33,12 +33,8 @@ export default async function AdminDashboard() {
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
             {isSuperAdmin
-              ? lang === "fr"
-                ? "🛡 Vue super admin"
-                : "🛡 Super admin view"
-              : lang === "fr"
-                ? "👋 Bonjour"
-                : "👋 Welcome"}
+              ? t("adminDash.superAdminView", lang)
+              : t("adminDash.welcome", lang)}
           </div>
           <h1 className="display" style={{ fontSize: "clamp(40px, 4.5vw, 64px)" }}>
             {lang === "fr" ? (
@@ -65,7 +61,7 @@ export default async function AdminDashboard() {
         <div className="stats">
           <div className="stat">
             <div className="stat__num numeric">{quizzes.length}</div>
-            <div className="stat__label">{lang === "fr" ? "Total" : "Total"}</div>
+            <div className="stat__label">{t("adminDash.total", lang)}</div>
           </div>
           <div className="stat">
             <div className="stat__num numeric">{publishedCount}</div>
@@ -101,11 +97,11 @@ export default async function AdminDashboard() {
           >
             <path d="M8 12V3M8 3L4 7M8 3l4 4M3 14h10" />
           </svg>
-          {lang === "fr" ? "Importer un JSON" : "Import JSON"}
+          {t("adminDash.importJson", lang)}
         </Link>
         <Link href="/admin/quizzes/new" className="btn btn--primary btn--sm">
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
-          {lang === "fr" ? "Nouvelle fiche" : "New quiz"}
+          {t("adminDash.newQuiz", lang)}
         </Link>
       </div>
 
@@ -127,10 +123,10 @@ export default async function AdminDashboard() {
           <thead>
             <tr>
               <th>{t("dash.col.title", lang)}</th>
-              <th style={{ width: 130 }}>{lang === "fr" ? "Matière" : "Subject"}</th>
-              <th style={{ width: 90 }}>{lang === "fr" ? "Niveau" : "Grade"}</th>
+              <th style={{ width: 130 }}>{t("adminDash.subject", lang)}</th>
+              <th style={{ width: 90 }}>{t("adminDash.grade", lang)}</th>
               {isSuperAdmin && (
-                <th style={{ width: 160 }}>{lang === "fr" ? "Auteur" : "Author"}</th>
+                <th style={{ width: 160 }}>{t("adminDash.author", lang)}</th>
               )}
               <th style={{ width: 70, textAlign: "right" }}>
                 {t("dash.col.questions", lang)}
@@ -138,8 +134,8 @@ export default async function AdminDashboard() {
               <th style={{ width: 120, textAlign: "right" }}>
                 {t("dash.col.submissions", lang)}
               </th>
-              <th style={{ width: 120 }}>{t("dash.col.status", lang)}</th>
-              <th style={{ width: 160, textAlign: "right" }}>
+              <th style={{ width: 150 }}>{t("dash.col.status", lang)}</th>
+              <th style={{ width: 290, textAlign: "right" }}>
                 {t("dash.col.actions", lang)}
               </th>
             </tr>
@@ -150,7 +146,7 @@ export default async function AdminDashboard() {
                 key={q.id}
                 id={q.id}
                 slug={q.slug}
-                titleFr={q.titleFr}
+                title={lang === "fr" ? q.titleFr : q.titleEn || q.titleFr}
                 subjectName={lang === "fr" ? q.subject.nameFr : q.subject.nameEn}
                 subjectIcon={q.subject.icon}
                 subjectColorKey={q.subject.colorKey}
@@ -163,6 +159,14 @@ export default async function AdminDashboard() {
                 draftLabel={t("dash.draft", lang)}
                 editLabel={t("dash.edit", lang)}
                 resultsLabel={t("dash.results", lang)}
+                viewAsStudentLabel={t("dash.viewAsStudent", lang)}
+                confirmPublishTitle={t("dash.confirmPublish.title", lang)}
+                confirmPublishDesc={t("dash.confirmPublish.desc", lang)}
+                confirmUnpublishTitle={t("dash.confirmUnpublish.title", lang)}
+                confirmUnpublishDesc={t("dash.confirmUnpublish.desc", lang)}
+                confirmPublishText={t("dash.confirmPublish.confirm", lang)}
+                confirmUnpublishText={t("dash.confirmUnpublish.confirm", lang)}
+                cancelLabel={t("dash.cancel", lang)}
               />
             ))}
           </tbody>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MathJaxContext, MathJax } from "better-react-mathjax";
 import { Skeleton } from "@/components/Skeleton";
 import type { Lang, SubmitResponse } from "@/types/quiz";
+import { t } from "@/lib/i18n";
 
 type PublicQuestion = {
   id: string;
@@ -42,8 +43,7 @@ const mathJaxConfig = {
   startup: { typeset: true },
 };
 
-export default function QuizClient({ slug }: { slug: string }) {
-  const [lang, setLang] = useState<Lang>("fr");
+export default function QuizClient({ slug, lang }: { slug: string; lang: Lang }) {
   const [quiz, setQuiz] = useState<PublicQuiz | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -103,7 +103,7 @@ export default function QuizClient({ slug }: { slug: string }) {
   const flatQuestions = useMemo(() => {
     const list: { q: PublicQuestion; partTitle: string }[] = [];
     for (const g of groupedQuestions) {
-      const pt = g.part ? g.part.title : lang === "fr" ? "Questions" : "Questions";
+      const pt = g.part ? g.part.title : "Questions";
       for (const q of g.questions) list.push({ q, partTitle: pt });
     }
     return list;
@@ -195,7 +195,7 @@ export default function QuizClient({ slug }: { slug: string }) {
 
   return (
     <MathJaxContext config={mathJaxConfig}>
-      {/* Header — breadcrumbs + progress + language toggle */}
+      {/* Header — breadcrumbs + progress (language is driven by the global nav switcher) */}
       <div className="qp__head">
         <div className="qp__crumbs">
           <span>{quiz.subject}</span>
@@ -208,7 +208,7 @@ export default function QuizClient({ slug }: { slug: string }) {
           {stage === "form" && (
             <div className="qp__progress">
               <div className="qp__progress-row">
-                <span>{lang === "fr" ? "Progression" : "Progress"}</span>
+                <span>{t("student.progression", lang)}</span>
                 <span className="numeric">
                   <b style={{ color: "#fff" }}>{answeredCount}</b> / {quiz.questions.length}
                 </span>
@@ -218,20 +218,6 @@ export default function QuizClient({ slug }: { slug: string }) {
               </div>
             </div>
           )}
-          <div className="row" style={{ gap: 6 }}>
-            <button
-              className={`btn btn--sm ${lang === "fr" ? "btn--primary" : "btn--ghost"}`}
-              onClick={() => setLang("fr")}
-            >
-              FR
-            </button>
-            <button
-              className={`btn btn--sm ${lang === "en" ? "btn--primary" : "btn--ghost"}`}
-              onClick={() => setLang("en")}
-            >
-              EN
-            </button>
-          </div>
         </div>
       </div>
 
@@ -244,7 +230,7 @@ export default function QuizClient({ slug }: { slug: string }) {
             <MathJax dynamic>
               {quiz.prelim && <PrelimCard prelim={quiz.prelim} lang={lang} />}
               <div className="qp__card">
-                <div className="qp__part">{lang === "fr" ? "Avant de commencer" : "Before you begin"}</div>
+                <div className="qp__part">{t("student.beforeYouBegin", lang)}</div>
                 <div className="qp__q">{quiz.title}</div>
                 <p className="muted" style={{ marginTop: -14, marginBottom: 26, fontSize: 14.5 }}>
                   {lang === "fr"
@@ -259,32 +245,32 @@ export default function QuizClient({ slug }: { slug: string }) {
                   }}
                 >
                   <div className="field" style={{ marginBottom: 0 }}>
-                    <label className="field__label">{lang === "fr" ? "Nom complet" : "Full name"}</label>
+                    <label className="field__label">{t("student.fullName", lang)}</label>
                     <input
                       className="input"
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
-                      placeholder={lang === "fr" ? "Ex : Marie Dupont" : "Ex: Marie Dupont"}
+                      placeholder={t("student.namePlaceholder", lang)}
                     />
                   </div>
                   <div className="field" style={{ marginBottom: 0 }}>
-                    <label className="field__label">{lang === "fr" ? "Classe (optionnel)" : "Class (optional)"}</label>
+                    <label className="field__label">{t("student.classOptional", lang)}</label>
                     <input
                       className="input"
                       value={studentClass}
                       onChange={(e) => setStudentClass(e.target.value)}
-                      placeholder={lang === "fr" ? "Ex : 2nde A" : "Ex: 10A"}
+                      placeholder={t("student.classPlaceholder", lang)}
                     />
                   </div>
                 </div>
                 <div className="qp__nav">
                   <span className="muted" style={{ fontSize: 13 }}>
                     {studentName.trim()
-                      ? lang === "fr" ? "Prêt quand tu l'es" : "Ready when you are"
-                      : lang === "fr" ? "Entre ton nom pour commencer" : "Enter your name to begin"}
+                      ? t("student.readyWhenYouAre", lang)
+                      : t("student.enterNameToBegin", lang)}
                   </span>
                   <button className="btn btn--primary" disabled={!studentName.trim()} onClick={() => setStep(1)}>
-                    {lang === "fr" ? "Commencer" : "Start"} <ChevronRight />
+                    {t("student.start", lang)} <ChevronRight />
                   </button>
                 </div>
               </div>
@@ -310,7 +296,7 @@ export default function QuizClient({ slug }: { slug: string }) {
               </div>
               {q.hint && (
                 <div className="muted" style={{ fontSize: 13, marginTop: -16, marginBottom: 22 }}>
-                  {lang === "fr" ? "Indice : " : "Hint: "}
+                  {t("student.hint", lang)}
                   <span dangerouslySetInnerHTML={{ __html: q.hint }} />
                 </div>
               )}
@@ -350,13 +336,13 @@ export default function QuizClient({ slug }: { slug: string }) {
               <div className="qp__nav">
                 {step > 1 ? (
                   <button className="btn btn--ghost" onClick={() => setStep(step - 1)}>
-                    <ChevronLeft /> {lang === "fr" ? "Précédent" : "Previous"}
+                    <ChevronLeft /> {t("student.previous", lang)}
                   </button>
                 ) : (
                   <span className="muted" style={{ fontSize: 13 }}>
                     {answered
-                      ? lang === "fr" ? "Tu peux changer ta réponse" : "You can change your answer"
-                      : lang === "fr" ? "Choisis une réponse pour continuer" : "Pick one to continue"}
+                      ? t("student.canChangeAnswer", lang)
+                      : t("student.pickOneToContinue", lang)}
                   </span>
                 )}
 
@@ -367,12 +353,12 @@ export default function QuizClient({ slug }: { slug: string }) {
                     onClick={handleSubmit}
                   >
                     {submitting
-                      ? lang === "fr" ? "Envoi…" : "Submitting…"
-                      : lang === "fr" ? "Soumettre mes réponses" : "Submit answers"}
+                      ? t("student.submitting", lang)
+                      : t("student.submitAnswers", lang)}
                   </button>
                 ) : (
                   <button className="btn btn--primary" disabled={!answered} onClick={() => setStep(step + 1)}>
-                    {lang === "fr" ? "Question suivante" : "Next question"} <ChevronRight />
+                    {t("student.nextQuestion", lang)} <ChevronRight />
                   </button>
                 )}
               </div>
@@ -457,7 +443,7 @@ function PrelimCard({ prelim, lang }: { prelim: PublicPrelim; lang: Lang }) {
             className="btn btn--ghost btn--sm"
             style={{ flexShrink: 0 }}
           >
-            {lang === "fr" ? "Plein écran ↗" : "Fullscreen ↗"}
+            {t("student.fullscreen", lang)}
           </a>
         )}
       </div>
@@ -484,10 +470,10 @@ function ResultsView({
 }) {
   const pct = Math.round((result.score / Math.max(1, result.total)) * 100);
   const level =
-    pct >= 90 ? { lbl: lang === "fr" ? "Excellent" : "Excellent" } :
-    pct >= 70 ? { lbl: lang === "fr" ? "Sur la bonne voie" : "On track" } :
-    pct >= 50 ? { lbl: lang === "fr" ? "Bases à revoir" : "Review prerequisites" } :
-                { lbl: lang === "fr" ? "Remédiation" : "Remedial" };
+    pct >= 90 ? { lbl: t("student.levelExcellent", lang) } :
+    pct >= 70 ? { lbl: t("student.levelOnTrack", lang) } :
+    pct >= 50 ? { lbl: t("student.levelReviewPrerequisites", lang) } :
+                { lbl: t("student.levelRemedial", lang) };
 
   // Conic ring fill proportional to score percentage.
   const ringDeg = Math.round((pct / 100) * 360);
@@ -497,7 +483,7 @@ function ResultsView({
       {/* Score summary screen */}
       <div className="card" style={{ textAlign: "center", padding: "48px 32px", marginBottom: 24 }}>
         <div className="eyebrow" style={{ marginBottom: 24 }}>
-          {lang === "fr" ? "Fiche terminée" : "Worksheet complete"}
+          {t("student.worksheetComplete", lang)}
         </div>
         <div
           style={{
@@ -548,7 +534,7 @@ function ResultsView({
               {result.score}/{result.total}
             </div>
             <div className="muted" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>
-              {lang === "fr" ? "Score" : "Score"}
+              Score
             </div>
           </div>
           <div className="vdivider" style={{ height: 40 }} />
@@ -557,7 +543,7 @@ function ResultsView({
               {result.total - result.score}
             </div>
             <div className="muted" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>
-              {lang === "fr" ? "À revoir" : "To review"}
+              {t("student.toReview", lang)}
             </div>
           </div>
         </div>
@@ -566,7 +552,7 @@ function ResultsView({
       {/* Per-question corrections */}
       <div className="card">
         <div className="eyebrow" style={{ marginBottom: 24 }}>
-          {lang === "fr" ? "Corrections" : "Corrections"}
+          Corrections
         </div>
 
         {result.corrections.map((c, i) => (
@@ -644,7 +630,7 @@ function ResultsView({
                   >
                     ✗
                   </span>
-                  {lang === "fr" ? "Pas tout à fait — voyons pourquoi." : "Not quite — let's look at why."}
+                  {t("student.notQuite", lang)}
                 </div>
                 <div
                   style={{ fontSize: 14, color: "#e2e8f0", lineHeight: 1.6 }}
@@ -662,7 +648,7 @@ function ResultsView({
                         marginBottom: 10,
                       }}
                     >
-                      {lang === "fr" ? "Regarder & apprendre" : "Watch & learn"}
+                      {t("student.watchAndLearn", lang)}
                     </div>
                     <a
                       href={c.remediation.videoUrl}
@@ -696,10 +682,10 @@ function ResultsView({
                       </span>
                       <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <span style={{ fontWeight: 600, fontSize: 14, color: "#fff" }}>
-                          {c.remediation.videoTitle ?? (lang === "fr" ? "Vidéo d'aide" : "Help video")}
+                          {c.remediation.videoTitle ?? t("student.helpVideo", lang)}
                         </span>
                         <span className="muted" style={{ fontSize: 12 }}>
-                          {lang === "fr" ? "Vidéo · 3–5 min" : "Video · 3–5 min"}
+                          {t("student.videoDuration", lang)}
                         </span>
                       </span>
                     </a>
@@ -717,7 +703,7 @@ function ResultsView({
                         marginBottom: 12,
                       }}
                     >
-                      {lang === "fr" ? "Questions de suivi" : "Follow-up questions"}
+                      {t("student.followUpQuestions", lang)}
                     </div>
                     {c.remediation.followUps.map((fu) => {
                       const picked = followUpAnswers[fu.id];
@@ -765,8 +751,8 @@ function ResultsView({
                               }}
                             >
                               {ok
-                                ? (lang === "fr" ? "Bravo !" : "Well done!")
-                                : (lang === "fr" ? "Pas encore — relis l'explication." : "Not yet — re-read the explanation.")}
+                                ? t("student.wellDone", lang)
+                                : t("student.notYet", lang)}
                             </div>
                           )}
                         </div>
@@ -809,7 +795,7 @@ function ResultsView({
                   >
                     ✓
                   </span>
-                  {lang === "fr" ? "Bien joué." : "Nice work."}
+                  {t("student.niceWork", lang)}
                 </div>
                 <div dangerouslySetInnerHTML={{ __html: c.explanation }} />
               </div>

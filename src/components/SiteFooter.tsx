@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLang } from "@/lib/lang";
 import { prisma } from "@/lib/prisma";
+import { t } from "@/lib/i18n";
 
 export async function SiteFooter() {
   const [lang, subjects] = await Promise.all([
@@ -24,14 +25,12 @@ export async function SiteFooter() {
           <div>
             <h3 className="h3" style={{ color: "#fff" }}>ICE Learning</h3>
             <p className="muted" style={{ marginTop: 8, maxWidth: 420, fontSize: 14 }}>
-              {lang === "fr"
-                ? "Plateforme d'apprentissage adaptative pour les sciences et les mathématiques."
-                : "Adaptive learning platform for science and mathematics."}
+              {t("footer.tagline", lang)}
             </p>
           </div>
           <div>
             <div className="eyebrow" style={{ border: 0, background: "transparent", padding: 0, marginBottom: 12 }}>
-              {lang === "fr" ? "Matières" : "Subjects"}
+              {t("footer.subjectsHeading", lang)}
             </div>
             <div className="col" style={{ gap: 8 }}>
               {subjects.map((s) => (
@@ -43,14 +42,14 @@ export async function SiteFooter() {
           </div>
           <div>
             <div className="eyebrow" style={{ border: 0, background: "transparent", padding: 0, marginBottom: 12 }}>
-              {lang === "fr" ? "Informations" : "Information"}
+              {t("footer.infoHeading", lang)}
             </div>
             <div className="col" style={{ gap: 8 }}>
               <Link href="/#how" className="muted" style={{ fontSize: 14 }}>
-                {lang === "fr" ? "Comment ça marche" : "How it works"}
+                {t("footer.howItWorks", lang)}
               </Link>
               <Link href="/admin/login" className="muted" style={{ fontSize: 14 }}>
-                {lang === "fr" ? "Espace enseignant" : "Teacher area"}
+                {t("footer.teacherArea", lang)}
               </Link>
             </div>
           </div>
@@ -67,7 +66,7 @@ export async function SiteFooter() {
           }}
         >
           <span>© 2026 ICE Learning</span>
-          <span>{lang === "fr" ? "Fait avec ❤" : "Made with ❤"}</span>
+          <span>{t("footer.madeWith", lang)}</span>
         </div>
       </div>
     </footer>

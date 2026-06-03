@@ -22,7 +22,6 @@ const remediationSchema = z.object({
   explanationEn: z.string().min(1),
   videos: z.array(videoSchema).max(2).optional().default([]),
   followups: z.array(childQuestionSchema).length(2),
-  retry: childQuestionSchema,
 });
 
 const questionSchema = z.object({

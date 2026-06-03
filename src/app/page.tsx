@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { chipClass } from "@/lib/subject-style";
@@ -42,7 +43,7 @@ export default async function HomePage() {
               <div>
                 <div className="eyebrow" style={{ marginBottom: 28 }}>
                   <span className="ico">📚</span>
-                  {en ? "Adaptive learning platform" : "Plateforme d'apprentissage adaptatif"}
+                  {t("home.badge", lang)}
                 </div>
                 <h1 className="display" style={{ marginBottom: 28 }}>
                   {en ? (
@@ -56,31 +57,29 @@ export default async function HomePage() {
                   )}
                 </h1>
                 <p className="muted" style={{ fontSize: 18, lineHeight: 1.6, maxWidth: 520, marginBottom: 36 }}>
-                  {en
-                    ? "Interactive adaptive worksheets for science and math, from middle school to high school. Every mistake becomes a learning opportunity."
-                    : "Des fiches interactives et adaptatives en sciences et maths, du collège au lycée. Chaque erreur devient une occasion d'apprendre."}
+                  {t("home.heroDesc", lang)}
                 </p>
                 <div className="row wrap-tight" style={{ gap: 12, marginBottom: 56 }}>
                   <a href="#subjects" className="btn btn--primary">
                     <span className="ico">🚀</span>
-                    {en ? "Explore subjects" : "Découvrir les matières"}
+                    {t("home.ctaPrimary", lang)}
                   </a>
                   <a href="#how" className="btn btn--ghost">
-                    ▶ {en ? "How it works" : "Comment ça marche"}
+                    ▶ {t("home.ctaSecondary", lang)}
                   </a>
                 </div>
                 <div className="stats">
                   <div className="stat">
                     <div className="stat__num numeric">{subjects.length}</div>
-                    <div className="stat__label">{en ? "Subjects" : "Matières"}</div>
+                    <div className="stat__label">{t("home.statSubjects", lang)}</div>
                   </div>
                   <div className="stat stat--accent">
                     <div className="stat__num numeric">{grades.length}</div>
-                    <div className="stat__label">{en ? "Grade levels" : "Niveaux"}</div>
+                    <div className="stat__label">{t("home.statGrades", lang)}</div>
                   </div>
                   <div className="stat">
                     <div className="stat__num numeric">{totalWorksheets}</div>
-                    <div className="stat__label">{en ? "Active worksheets" : "Fiches actives"}</div>
+                    <div className="stat__label">{t("home.statQuizzes", lang)}</div>
                   </div>
                 </div>
               </div>
@@ -92,8 +91,8 @@ export default async function HomePage() {
                     <div>
                       <div className="h3" style={{ color: "#fff" }}>{name(s)}</div>
                       <div className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>
-                        {grades.length} {en ? "grade levels" : "niveaux"} · {countFor(s.id)}{" "}
-                        {en ? "worksheets" : "fiches"}
+                        {grades.length} {t("home.gradelevels", lang)} · {countFor(s.id)}{" "}
+                        {t("home.worksheets", lang)}
                       </div>
                     </div>
                     <span className="arrow">
@@ -125,33 +124,25 @@ export default async function HomePage() {
                 )}
               </h2>
               <p className="muted" style={{ maxWidth: 420, margin: 0, fontSize: 15 }}>
-                {en
-                  ? "No account needed to start. Pick a worksheet, learn from your mistakes, master the concept."
-                  : "Aucun compte requis. Choisis une fiche, apprends de tes erreurs, maîtrise le concept."}
+                {t("home.howDesc", lang)}
               </p>
             </div>
             <div className="grid grid--3">
               {[
                 {
                   step: "01",
-                  h: en ? "Pick a worksheet" : "Choisis une fiche",
-                  p: en
-                    ? "Browse by subject and grade. Each worksheet is 8–12 questions, designed around one concept."
-                    : "Parcours par matière et niveau. Chaque fiche compte 8 à 12 questions sur un même concept.",
+                  h: t("home.howStep1Title", lang),
+                  p: t("home.howStep1Desc", lang),
                 },
                 {
                   step: "02",
-                  h: en ? "Learn from mistakes" : "Apprends de tes erreurs",
-                  p: en
-                    ? "Wrong answer? You get a short video explaining the concept and a follow-up question to try."
-                    : "Mauvaise réponse ? Une courte vidéo t'explique le concept et une question de suivi te remet en piste.",
+                  h: t("home.howStep2Title", lang),
+                  p: t("home.howStep2Desc", lang),
                 },
                 {
                   step: "03",
-                  h: en ? "Master the concept" : "Maîtrise le concept",
-                  p: en
-                    ? "Finish with a retry question and a clear score. Your teacher sees what worked and what didn't."
-                    : "Termine par une question de reprise et un score clair. Ton enseignant voit ce qui a marché.",
+                  h: t("home.howStep3Title", lang),
+                  p: t("home.howStep3Desc", lang),
                 },
               ].map((c) => (
                 <div key={c.step} className="card">

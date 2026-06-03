@@ -17,6 +17,11 @@ const lexend = Lexend({
 export const metadata: Metadata = {
   title: "ICE Learning — Learn at your own pace",
   description: "Adaptive learning platform for science and mathematics.",
+  icons: {
+    icon: "/ice-logo.png",
+    shortcut: "/ice-logo.png",
+    apple: "/ice-logo.png",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

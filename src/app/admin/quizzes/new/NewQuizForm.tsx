@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
-import type { Lang } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 
 type Subject = { id: string; nameFr: string; nameEn: string };
 type Grade = { id: string; nameFr: string; nameEn: string };
@@ -123,7 +123,7 @@ export default function NewQuizForm({
         }}
       >
         <a href="/admin/quizzes/new" className="btn btn--ghost">
-          {lang === "fr" ? "Changer de méthode" : "Change method"}
+          {t("quizNew.changeMethod", lang)}
         </a>
         <button
           type="button"

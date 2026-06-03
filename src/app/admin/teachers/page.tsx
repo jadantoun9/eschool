@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import TeachersClient from "./TeachersClient";
 import { getLang } from "@/lib/lang";
 import { dict, t } from "@/lib/i18n";
+import { BackLink } from "@/components/BackLink";
 
 export default async function TeachersPage() {
   const session = await auth();
@@ -17,18 +18,21 @@ export default async function TeachersPage() {
   });
 
   return (
-    <TeachersClient
-      lang={lang}
-      strings={dict[lang]}
-      teachers={teachers.map((t) => ({
-        id: t.id,
-        email: t.email,
-        name: t.name,
-        role: t.role,
-        status: t.passwordHash ? "active" : "pending",
-        inviteToken: t.inviteToken,
-        createdAt: t.createdAt.toISOString(),
-      }))}
-    />
+    <>
+      <BackLink href="/admin" label={t("common.backDashboard", lang)} />
+      <TeachersClient
+        lang={lang}
+        strings={dict[lang]}
+        teachers={teachers.map((teacher) => ({
+          id: teacher.id,
+          email: teacher.email,
+          name: teacher.name,
+          role: teacher.role,
+          status: teacher.passwordHash ? "active" : "pending",
+          inviteToken: teacher.inviteToken,
+          createdAt: teacher.createdAt.toISOString(),
+        }))}
+      />
+    </>
   );
 }

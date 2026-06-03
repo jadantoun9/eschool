@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { dict, type Lang } from "@/lib/i18n";
+import { dict, t, type Lang } from "@/lib/i18n";
 import { Spinner } from "@/components/Spinner";
 
 function readLangCookie(): Lang {
@@ -27,7 +27,7 @@ function initials(name: string): string {
 
 function roleLabel(role: string, lang: Lang): string {
   if (role === "SUPER_ADMIN") return "Admin";
-  return lang === "fr" ? "Enseignant" : "Teacher";
+  return t("teachers.teacher", lang);
 }
 
 type Invitee = { name: string; email: string; role: string };
@@ -198,15 +198,9 @@ function AcceptInner() {
                   ))}
                 </div>
                 <span className="field__hint">
-                  {strength === 1 &&
-                    (lang === "fr"
-                      ? "Trop court — au moins 10 caractères"
-                      : "Too short — at least 10 characters")}
-                  {strength === 2 &&
-                    (lang === "fr"
-                      ? "Correct — ajoute un symbole ou un chiffre"
-                      : "OK — add a symbol or number")}
-                  {strength === 3 && (lang === "fr" ? "Solide" : "Strong")}
+                  {strength === 1 && t("invite.strengthWeak", lang)}
+                  {strength === 2 && t("invite.strengthOk", lang)}
+                  {strength === 3 && t("invite.strengthStrong", lang)}
                 </span>
               </>
             )}

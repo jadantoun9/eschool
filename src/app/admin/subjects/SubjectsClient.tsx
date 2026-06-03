@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { chipClass } from "@/lib/subject-style";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 
 type Subject = {
@@ -98,13 +99,10 @@ function SubjectCard({
 
   async function del() {
     const ok = await confirm({
-      title: lang === "fr" ? "Supprimer cette matière ?" : "Delete this subject?",
-      description:
-        lang === "fr"
-          ? "Cette action est définitive et ne peut pas être annulée."
-          : "This action is permanent and cannot be undone.",
-      confirmText: lang === "fr" ? "Supprimer" : "Delete",
-      cancelText: lang === "fr" ? "Annuler" : "Cancel",
+      title: t("subjects.deleteTitle", lang),
+      description: t("subjects.deleteDesc", lang),
+      confirmText: t("edit.delete", lang),
+      cancelText: t("dash.cancel", lang),
     });
     if (!ok) return;
     await fetch(`/api/subjects/${subject.id}`, { method: "DELETE" });
@@ -128,7 +126,7 @@ function SubjectCard({
         <div className="row" style={{ gap: 2 }}>
           <button
             className="icon-btn icon-btn--accent"
-            title={editing ? (lang === "fr" ? "Enregistrer" : "Save") : (lang === "fr" ? "Modifier" : "Edit")}
+            title={editing ? t("edit.save", lang) : t("dash.edit", lang)}
             onClick={editing ? save : () => setEditing(true)}
             disabled={busy}
           >
@@ -146,7 +144,7 @@ function SubjectCard({
           </button>
           <button
             className="icon-btn icon-btn--danger"
-            title={lang === "fr" ? "Supprimer" : "Delete"}
+            title={t("edit.delete", lang)}
             onClick={del}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -174,7 +172,7 @@ function SubjectCard({
         <>
           <div className="field" style={{ marginTop: 14 }}>
             <label className="field__label">
-              {lang === "fr" ? "Nom (anglais)" : "Name (English)"}
+              {t("subjects.nameEnLabel", lang)}
             </label>
             <input
               className="input"
@@ -184,7 +182,7 @@ function SubjectCard({
           </div>
           <div className="field">
             <label className="field__label">
-              {lang === "fr" ? "Nom (français)" : "Name (French)"}
+              {t("subjects.nameFrLabel", lang)}
             </label>
             <input
               className="input"
@@ -194,7 +192,7 @@ function SubjectCard({
           </div>
           <div className="field">
             <label className="field__label">
-              {lang === "fr" ? "Icône" : "Icon"}
+              {t("subjects.iconLabel", lang)}
             </label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
               {ICON_OPTS.map((ic) => (
@@ -210,7 +208,7 @@ function SubjectCard({
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
             <label className="field__label">
-              {lang === "fr" ? "Couleur" : "Color"}
+              {t("subjects.colorLabel", lang)}
             </label>
             <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 4 }}>
               {COLOR_KEYS.map((c) => (
@@ -239,16 +237,14 @@ function SubjectCard({
                 setColorKey(subject.colorKey);
               }}
             >
-              {lang === "fr" ? "Annuler" : "Cancel"}
+              {t("dash.cancel", lang)}
             </button>
             <button
               className="btn btn--primary btn--sm"
               onClick={save}
               disabled={busy || !nameEn || !nameFr}
             >
-              {busy
-                ? (lang === "fr" ? "Enregistrement…" : "Saving…")
-                : (lang === "fr" ? "Enregistrer" : "Save")}
+              {busy ? t("edit.saving", lang) : t("edit.save", lang)}
             </button>
           </div>
         </>
@@ -321,12 +317,10 @@ function NewSubjectCard({
           +
         </div>
         <div style={{ fontWeight: 600 }}>
-          {lang === "fr" ? "Nouvelle matière" : "New subject"}
+          {t("subjects.newSubject", lang)}
         </div>
         <div className="muted" style={{ fontSize: 12, textAlign: "center", maxWidth: 200 }}>
-          {lang === "fr"
-            ? "Ajoute une catégorie comme Géographie ou Informatique"
-            : "Add a top-level category like Geography or Computer science"}
+          {t("subjects.newSubjectHint", lang)}
         </div>
       </div>
     );
@@ -335,7 +329,7 @@ function NewSubjectCard({
   return (
     <div style={subjCardBase}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span className="h4">{lang === "fr" ? "Nouvelle matière" : "New subject"}</span>
+        <span className="h4">{t("subjects.newSubject", lang)}</span>
         <button className="icon-btn" onClick={() => setOpen(false)}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M3 3l10 10M13 3L3 13" />
@@ -354,7 +348,7 @@ function NewSubjectCard({
       </div>
       <div className="field">
         <label className="field__label">
-          {lang === "fr" ? "Nom (anglais)" : "Name (English)"}
+          {t("subjects.nameEnLabel", lang)}
         </label>
         <input
           className="input"
@@ -364,7 +358,7 @@ function NewSubjectCard({
       </div>
       <div className="field">
         <label className="field__label">
-          {lang === "fr" ? "Nom (français)" : "Name (French)"}
+          {t("subjects.nameFrLabel", lang)}
         </label>
         <input
           className="input"
@@ -374,7 +368,7 @@ function NewSubjectCard({
       </div>
       <div className="field">
         <label className="field__label">
-          {lang === "fr" ? "Icône" : "Icon"}
+          {t("subjects.iconLabel", lang)}
         </label>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
           {ICON_OPTS.map((ic) => (
@@ -390,7 +384,7 @@ function NewSubjectCard({
       </div>
       <div className="field" style={{ marginBottom: 0 }}>
         <label className="field__label">
-          {lang === "fr" ? "Couleur" : "Color"}
+          {t("subjects.colorLabel", lang)}
         </label>
         <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 4 }}>
           {COLOR_KEYS.map((c) => (
@@ -415,16 +409,14 @@ function NewSubjectCard({
 
       <div className="row" style={{ marginTop: 16, gap: 8 }}>
         <button className="btn btn--ghost btn--sm" onClick={() => setOpen(false)}>
-          {lang === "fr" ? "Annuler" : "Cancel"}
+          {t("dash.cancel", lang)}
         </button>
         <button
           className="btn btn--primary btn--sm"
           onClick={create}
           disabled={busy || !slug || !nameFr || !nameEn}
         >
-          {busy
-            ? (lang === "fr" ? "Création…" : "Creating…")
-            : (lang === "fr" ? "Créer" : "Create")}
+          {busy ? t("subjects.creating", lang) : t("subjects.create", lang)}
         </button>
       </div>
     </div>

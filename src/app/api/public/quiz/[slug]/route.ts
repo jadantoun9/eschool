@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 import { LANG, type Lang } from "@/types/quiz";
 
 export async function GET(
@@ -8,8 +9,8 @@ export async function GET(
 ) {
   const { slug } = await params;
   const url = new URL(req.url);
-  const langParsed = LANG.safeParse(url.searchParams.get("lang") ?? "fr");
-  const lang: Lang = langParsed.success ? langParsed.data : "fr";
+  const langParsed = LANG.safeParse(url.searchParams.get("lang") ?? "en");
+  const lang: Lang = langParsed.success ? langParsed.data : "en";
 
   const quiz = await prisma.quiz.findUnique({
     where: { slug },
@@ -25,8 +26,12 @@ export async function GET(
     },
   });
 
+  // Students only get published worksheets. Staff can preview drafts.
   if (!quiz || !quiz.isPublished) {
-    return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    const session = await auth();
+    if (!quiz || !session?.user) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
   }
 
   const t = (fr: string | null, en: string | null) =>

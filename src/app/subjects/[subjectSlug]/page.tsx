@@ -56,7 +56,7 @@ export default async function SubjectPage({ params }: { params: Params }) {
               </span>
               <div>
                 <div className="eyebrow">
-                  {lang === "fr" ? "Matière" : "Subject"}
+                  {t("browse.subjectEyebrow", lang)}
                 </div>
                 <h1
                   className="display"
@@ -111,11 +111,11 @@ export default async function SubjectPage({ params }: { params: Params }) {
                       >
                         <span className="numeric" style={{ color: "#fff", fontWeight: 700 }}>{n}</span>
                         {n === 1
-                          ? (lang === "fr" ? "fiche" : "worksheet")
-                          : (lang === "fr" ? "fiches" : "worksheets")}
+                          ? t("browse.worksheetSingular", lang)
+                          : t("browse.worksheetPlural", lang)}
                         {n === 0 && (
                           <span style={{ marginLeft: 6 }}>
-                            · {lang === "fr" ? "à venir" : "coming soon"}
+                            · {t("browse.comingSoon", lang)}
                           </span>
                         )}
                       </div>

@@ -204,7 +204,40 @@ input, textarea, select { font: inherit; color: inherit; }
   border-radius: var(--radius-pill);
   letter-spacing: 0.02em;
 }
-.lang-toggle button.active { background: #0a1936; color: #fff; }
+.lang-toggle button.active { background: var(--accent); color: var(--accent-fg); }
+.lang-toggle button:disabled { cursor: progress; }
+.lang-toggle[data-busy="true"] { opacity: 0.65; }
+
+/* Indeterminate top progress bar shown while the UI re-renders
+   (e.g. switching language). */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 200;
+  overflow: hidden;
+  pointer-events: none;
+}
+.route-progress::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 12px 1px var(--accent-glow);
+  animation: route-progress-slide 0.9s ease-in-out infinite;
+}
+@keyframes route-progress-slide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-progress::before { animation-duration: 1.6s; }
+}
 
 .signout {
   background: #fff;
@@ -473,6 +506,43 @@ section { position: relative; z-index: 1; }
 .icon-btn:hover { background: var(--surface-2); color: #fff; }
 .icon-btn--accent:hover { color: var(--accent); }
 .icon-btn--danger:hover { color: var(--danger); background: var(--danger-bg); }
+
+/* Toggle switch (publish status) */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: rgba(148, 163, 184, 0.15);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 140ms, border-color 140ms;
+}
+.switch:hover { border-color: var(--border-accent); }
+.switch__thumb {
+  position: absolute;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #94a3b8;
+  transition: transform 140ms, background 140ms;
+}
+.switch[aria-checked="true"] {
+  background: var(--success-bg);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.switch[aria-checked="true"] .switch__thumb {
+  transform: translateX(24px);
+  background: #4ade80;
+}
+.switch:disabled { opacity: 0.6; cursor: default; }
+.switch__row { display: flex; align-items: center; gap: 11px; }
+.switch__label { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
 
 /* ============================================================
    FORMS

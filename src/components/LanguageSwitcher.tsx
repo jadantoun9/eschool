@@ -6,32 +6,46 @@ import type { Lang } from "@/lib/i18n";
 
 export function LanguageSwitcher({ current }: { current: Lang }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [lang, setLang] = useState<Lang>(current);
 
-  async function change(next: Lang) {
-    if (next === lang) return;
+  function change(next: Lang) {
+    if (next === lang || isPending) return;
+    // Highlight the target immediately, then persist + re-render. isPending
+    // stays true through the fetch and the server refresh, driving the loader.
     setLang(next);
-    await fetch("/api/lang", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ lang: next }),
+    startTransition(async () => {
+      await fetch("/api/lang", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ lang: next }),
+      });
+      router.refresh();
     });
-    startTransition(() => router.refresh());
   }
 
   return (
-    <div className="lang-toggle" role="group" aria-label="Language">
-      {(["en", "fr"] as const).map((code) => (
-        <button
-          key={code}
-          type="button"
-          onClick={() => change(code)}
-          className={code === lang ? "active" : ""}
-        >
-          {code.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <>
+      {isPending && <span className="route-progress" aria-hidden />}
+      <div
+        className="lang-toggle"
+        role="group"
+        aria-label="Language"
+        aria-busy={isPending}
+        data-busy={isPending ? "true" : undefined}
+      >
+        {(["en", "fr"] as const).map((code) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => change(code)}
+            disabled={isPending}
+            className={code === lang ? "active" : ""}
+          >
+            {code.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }

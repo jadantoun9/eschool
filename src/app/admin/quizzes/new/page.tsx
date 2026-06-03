@@ -43,8 +43,15 @@ export default async function NewQuizPage({
   if (step === "choose") {
     return (
       <div className="container container--narrow">
+        <a
+          href="/admin"
+          className="muted"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 16 }}
+        >
+          ← {t("common.backDashboard", lang)}
+        </a>
         <div className="eyebrow" style={{ marginBottom: 16 }}>
-          {lang === "fr" ? "Nouvelle fiche" : "New worksheet"}
+          {t("quizNew.eyebrow", lang)}
         </div>
         <h1 className="display" style={{ fontSize: "clamp(36px, 4vw, 52px)" }}>
           {lang === "fr" ? (
@@ -58,9 +65,7 @@ export default async function NewQuizPage({
           )}
         </h1>
         <p className="muted" style={{ marginTop: 16, marginBottom: 36, maxWidth: 560 }}>
-          {lang === "fr"
-            ? "Choisis un point de départ. Tu peux changer plus tard — les deux chemins mènent au même éditeur."
-            : "Pick a starting point. You can always switch later — both paths land in the same editor."}
+          {t("quizNew.subtitle", lang)}
         </p>
 
         <ChooseMethod
@@ -79,10 +84,10 @@ export default async function NewQuizPage({
         className="muted"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, marginBottom: 12 }}
       >
-        ← {lang === "fr" ? "Changer de méthode" : "Change build method"}
+        ← {t("quizNew.changeMethodBack", lang)}
       </a>
       <div className="eyebrow" style={{ marginBottom: 16 }}>
-        {lang === "fr" ? "Nouvelle fiche · manuel" : "New worksheet · manual"}
+        {t("quizNew.eyebrowManual", lang)}
       </div>
       <h1 className="display" style={{ fontSize: "clamp(36px, 4vw, 52px)" }}>
         {lang === "fr" ? (

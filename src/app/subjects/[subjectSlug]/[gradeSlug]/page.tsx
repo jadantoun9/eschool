@@ -40,9 +40,7 @@ export default async function GradePage({ params }: { params: Params }) {
   const worksheetCount = quizzes.length;
   const subtitleText =
     worksheetCount === 0
-      ? lang === "fr"
-        ? "Rien ici pour le moment"
-        : "Nothing here yet"
+      ? t("browse.nothingHereYet", lang)
       : lang === "fr"
       ? `${worksheetCount} fiche${worksheetCount === 1 ? "" : "s"} — commence où tu veux`
       : `${worksheetCount} worksheet${worksheetCount === 1 ? "" : "s"} — start anywhere`;
@@ -93,7 +91,7 @@ export default async function GradePage({ params }: { params: Params }) {
               </div>
               {worksheetCount > 0 && (
                 <div className="muted" style={{ fontSize: 13 }}>
-                  {lang === "fr" ? "Triées par ordre recommandé" : "Sorted by recommended order"}
+                  {t("browse.sortedByRecommended", lang)}
                 </div>
               )}
             </div>
@@ -103,19 +101,17 @@ export default async function GradePage({ params }: { params: Params }) {
               <div className="empty-state">
                 <div className="empty-state__icon">📝</div>
                 <h3 className="h3" style={{ marginBottom: 8 }}>
-                  {lang === "fr" ? "Pas encore de fiches" : "No worksheets yet"}
+                  {t("browse.noWorksheetsYet", lang)}
                 </h3>
                 <p className="muted" style={{ maxWidth: 420, margin: "0 auto" }}>
-                  {lang === "fr"
-                    ? "Aucune fiche n'a encore été publiée pour ce niveau. Reviens plus tard ou choisis un autre niveau."
-                    : "Your teacher hasn't published anything for this grade yet. Check back soon or pick a different grade."}
+                  {t("browse.emptyGradeHint", lang)}
                 </p>
                 <Link
                   href={`/subjects/${subject.slug}`}
                   className="btn btn--ghost"
                   style={{ marginTop: 24 }}
                 >
-                  ‹ {lang === "fr" ? "Autres niveaux" : "Other grades"}
+                  ‹ {t("browse.otherGrades", lang)}
                 </Link>
               </div>
             ) : (
@@ -137,7 +133,7 @@ export default async function GradePage({ params }: { params: Params }) {
                             </span>
                             {!q.isPublished && (
                               <span className="badge badge--draft">
-                                {lang === "fr" ? "Brouillon" : "Draft"}
+                                {t("browse.draft", lang)}
                               </span>
                             )}
                           </div>

@@ -94,7 +94,7 @@ export async function SiteNav({ mode = "public" }: { mode?: "public" | "admin" }
           </form>
         ) : (
           <Link href={session?.user ? "/admin" : "/admin/login"} className="signout">
-            {lang === "fr" ? "Connexion" : "Sign in"}
+            {t("nav.signIn", lang)}
           </Link>
         )}
         <AflecMark />

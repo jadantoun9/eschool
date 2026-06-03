@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 
 type T = {
@@ -107,7 +108,7 @@ export default function TeachersClient({
       >
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
-            🛡 {lang === "fr" ? "Super admin uniquement" : "Super admin only"}
+            🛡 {t("teachers.superAdminOnly", lang)}
           </div>
           <h1 className="h1" style={{ marginBottom: 6 }}>
             {s["teachers.title"]}
@@ -126,7 +127,7 @@ export default function TeachersClient({
           <div className="stat">
             <div className="stat__num numeric">{teachers.length}</div>
             <div className="stat__label">
-              {lang === "fr" ? "Total" : "Total"}
+              {t("teachers.total", lang)}
             </div>
           </div>
         </div>
@@ -161,7 +162,7 @@ export default function TeachersClient({
           <label className="field__label">{s["teachers.name"]}</label>
           <input
             className="input"
-            placeholder={lang === "fr" ? "Nom complet" : "Full name"}
+            placeholder={t("teachers.fullNamePlaceholder", lang)}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -172,11 +173,7 @@ export default function TeachersClient({
           onClick={invite}
         >
           {busy ? (
-            lang === "fr" ? (
-              "Envoi…"
-            ) : (
-              "Sending…"
-            )
+            t("teachers.sending", lang)
           ) : (
             <>
               <svg
@@ -256,10 +253,10 @@ export default function TeachersClient({
             <th>{s["teachers.col.name"]}</th>
             <th>{s["teachers.col.email"]}</th>
             <th>{s["teachers.col.role"]}</th>
-            <th style={{ width: 160 }}>{lang === "fr" ? "Inscription" : "Joined"}</th>
+            <th style={{ width: 160 }}>{t("teachers.col.joined", lang)}</th>
             <th style={{ width: 120 }}>{s["teachers.col.status"]}</th>
             <th style={{ width: 80, textAlign: "right" as const }}>
-              {lang === "fr" ? "Actions" : "Actions"}
+              {t("teachers.col.actions", lang)}
             </th>
           </tr>
         </thead>
@@ -350,7 +347,7 @@ export default function TeachersClient({
                     {teacher.status === "pending" && teacher.inviteToken && (
                       <button
                         className="btn btn--ghost btn--sm"
-                        title={lang === "fr" ? "Renvoyer" : "Resend"}
+                        title={t("teachers.resend", lang)}
                         onClick={async () => {
                           // Rotate the token server-side (old link dies, clock resets),
                           // then open a fresh mail draft with the new link.
@@ -362,7 +359,7 @@ export default function TeachersClient({
                           // (e.g. a 500), so parse defensively.
                           const data = await res.json().catch(() => null);
                           if (!res.ok) {
-                            setErr(data?.error ?? (lang === "fr" ? "Erreur" : "Error"));
+                            setErr(data?.error ?? t("teachers.error", lang));
                             return;
                           }
                           openInviteEmail({
@@ -374,24 +371,21 @@ export default function TeachersClient({
                           router.refresh();
                         }}
                       >
-                        {lang === "fr" ? "Renvoyer" : "Resend"}
+                        {t("teachers.resend", lang)}
                       </button>
                     )}
                     <button
                       className="icon-btn icon-btn--danger"
-                      title={lang === "fr" ? "Supprimer" : "Remove"}
+                      title={t("teachers.remove", lang)}
                       onClick={async () => {
                         const ok = await confirm({
                           title:
                             lang === "fr"
                               ? `Supprimer ${teacher.name} ?`
                               : `Remove ${teacher.name}?`,
-                          description:
-                            lang === "fr"
-                              ? "L'enseignant perdra l'accès immédiatement."
-                              : "This teacher will lose access immediately.",
-                          confirmText: lang === "fr" ? "Supprimer" : "Remove",
-                          cancelText: lang === "fr" ? "Annuler" : "Cancel",
+                          description: t("teachers.confirmRemoveDesc", lang),
+                          confirmText: t("teachers.remove", lang),
+                          cancelText: t("teachers.cancel", lang),
                         });
                         if (!ok) return;
                         await fetch(`/api/teachers/${teacher.id}`, {

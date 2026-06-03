@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
+import { BackLink } from "@/components/BackLink";
 import GradesClient from "./GradesClient";
 
 export default async function GradesAdminPage() {
@@ -12,5 +14,10 @@ export default async function GradesAdminPage() {
 
   const grades = await prisma.grade.findMany({ orderBy: { order: "asc" } });
 
-  return <GradesClient lang={lang} grades={grades} />;
+  return (
+    <>
+      <BackLink href="/admin" label={t("common.backDashboard", lang)} />
+      <GradesClient lang={lang} grades={grades} />
+    </>
+  );
 }

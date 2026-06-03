@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { t } from "@/lib/i18n";
 
 const check = (
   <svg
@@ -43,7 +44,7 @@ export default function ChooseMethod({
   }> = [
     {
       id: "ai",
-      badge: lang === "fr" ? "Le + rapide" : "Fastest",
+      badge: t("quizNew.badgeFastest", lang),
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z" />
@@ -51,11 +52,8 @@ export default function ChooseMethod({
           <path d="M5 16l.6 1.8L7 18l-1.4.4L5 20l-.6-1.8L3 18l1.4-.4L5 16z" />
         </svg>
       ),
-      title: lang === "fr" ? "Construire avec l'IA" : "Build it with AI",
-      body:
-        lang === "fr"
-          ? "Télécharge un modèle, donne-le à ChatGPT / Claude / Gemini, puis dépose le résultat ici."
-          : "Download a template, give it to ChatGPT / Claude / Gemini, then drop the result back here.",
+      title: t("quizNew.aiTitle", lang),
+      body: t("quizNew.aiBody", lang),
       bullets:
         lang === "fr"
           ? [
@@ -77,11 +75,8 @@ export default function ChooseMethod({
           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
         </svg>
       ),
-      title: lang === "fr" ? "Créer à la main" : "Create manually",
-      body:
-        lang === "fr"
-          ? "Commence avec une fiche vide et ajoute les questions une à une dans l'éditeur."
-          : "Start with a blank worksheet and add questions one by one in the editor.",
+      title: t("quizNew.manualTitle", lang),
+      body: t("quizNew.manualBody", lang),
       bullets:
         lang === "fr"
           ? [
@@ -199,7 +194,7 @@ export default function ChooseMethod({
 
       <div style={{ marginTop: 28, display: "flex", justifyContent: "flex-end" }}>
         <button type="button" className="btn btn--primary btn--lg" onClick={handleContinue}>
-          {lang === "fr" ? "Continuer" : "Continue"}
+          {t("quizNew.continue", lang)}
           <span aria-hidden>→</span>
         </button>
       </div>

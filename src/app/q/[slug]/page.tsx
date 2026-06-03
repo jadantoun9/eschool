@@ -17,11 +17,13 @@ export default async function StudentQuizPage({
 }) {
   const { slug } = await params;
   const quiz = await prisma.quiz.findUnique({ where: { slug }, select: { isPublished: true } });
-  if (!quiz || !quiz.isPublished) notFound();
 
   const session = await auth();
   const isStaff = !!session?.user;
   const lang = await getLang();
+
+  // Students only see published worksheets. Staff can preview drafts.
+  if (!quiz || (!quiz.isPublished && !isStaff)) notFound();
 
   return (
     <div className="page">
@@ -36,7 +38,7 @@ export default async function StudentQuizPage({
         )}
         <section className="section">
           <div className="container container--narrow">
-            <QuizClient slug={slug} />
+            <QuizClient slug={slug} lang={lang} />
           </div>
         </section>
         <SiteFooter />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
-import type { Lang } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 
 type Grade = { id: string; slug: string; nameFr: string; nameEn: string; order: number };
 
@@ -48,12 +48,9 @@ export default function GradesClient({
         lang === "fr"
           ? `Supprimer « ${g.nameFr} » ?`
           : `Delete "${g.nameEn}"?`,
-      description:
-        lang === "fr"
-          ? "Cette action est définitive. Un niveau utilisé par des fiches ne peut pas être supprimé."
-          : "This action is permanent. A grade used by existing worksheets cannot be deleted.",
-      confirmText: lang === "fr" ? "Supprimer" : "Delete",
-      cancelText: lang === "fr" ? "Annuler" : "Cancel",
+      description: t("grades.deleteDescription", lang),
+      confirmText: t("grades.delete", lang),
+      cancelText: t("grades.cancel", lang),
       // Runs inside the dialog: button shows a spinner and the dialog stays
       // open until the request resolves.
       onConfirm: async () => {
@@ -61,12 +58,12 @@ export default function GradesClient({
         if (!res.ok) {
           const msg = (await res.json().catch(() => null))?.error;
           toast.error(
-            msg ?? (lang === "fr" ? "Échec de la suppression." : "Failed to delete.")
+            msg ?? t("grades.deleteFailed", lang)
           );
           // Throw so the dialog stays open after a failed delete.
           throw new Error(msg ?? "delete failed");
         }
-        toast.success(lang === "fr" ? "Niveau supprimé." : "Grade deleted.");
+        toast.success(t("grades.gradeDeleted", lang));
         router.refresh();
       },
     });
@@ -78,15 +75,13 @@ export default function GradesClient({
       <div className="section-head">
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
-            🎓 {lang === "fr" ? "Catalogue" : "Catalogue"}
+            🎓 {t("grades.catalogue", lang)}
           </div>
           <h1 className="h1" style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Niveaux" : "Grade levels"}
+            {t("grades.title", lang)}
           </h1>
           <p className="muted">
-            {lang === "fr"
-              ? "Les niveaux que ton école couvre. Les libellés anglais et français sont affichés aux élèves."
-              : "The grade levels your school covers. Both English and French labels are shown to students."}
+            {t("grades.subtitle", lang)}
           </p>
         </div>
       </div>
@@ -97,9 +92,9 @@ export default function GradesClient({
           <thead>
             <tr>
               <th>#</th>
-              <th>{lang === "fr" ? "Slug" : "Slug"}</th>
-              <th>{lang === "fr" ? "Nom (FR)" : "Name (FR)"}</th>
-              <th>{lang === "fr" ? "Nom (EN)" : "Name (EN)"}</th>
+              <th>{t("grades.colSlug", lang)}</th>
+              <th>{t("grades.colNameFr", lang)}</th>
+              <th>{t("grades.colNameEn", lang)}</th>
               <th></th>
             </tr>
           </thead>
@@ -129,7 +124,7 @@ export default function GradesClient({
                   <div className="table__actions">
                     <button
                       className="icon-btn icon-btn--danger"
-                      title={lang === "fr" ? "Supprimer" : "Delete"}
+                      title={t("grades.delete", lang)}
                       onClick={() => deleteGrade(g)}
                     >
                       <svg
@@ -153,7 +148,7 @@ export default function GradesClient({
         <div className="empty-state" style={{ marginBottom: 24 }}>
           <div className="empty-state__icon">🎓</div>
           <p className="muted" style={{ marginTop: 8 }}>
-            {lang === "fr" ? "Aucun niveau pour l'instant." : "No grade levels yet."}
+            {t("grades.noGrades", lang)}
           </p>
         </div>
       )}
@@ -161,7 +156,7 @@ export default function GradesClient({
       {/* Add grade form */}
       <div className="card" style={{ marginBottom: 24 }}>
         <h2 className="h3" style={{ marginBottom: 20 }}>
-          {lang === "fr" ? "Ajouter un niveau" : "Add grade"}
+          {t("grades.addGrade", lang)}
         </h2>
 
         <div className="grid grid--3" style={{ gap: 16, marginBottom: 18 }}>
@@ -173,34 +168,34 @@ export default function GradesClient({
               onChange={(e) =>
                 setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
               }
-              placeholder={lang === "fr" ? "ex. 6, 7, 12" : "e.g. 6, 7, 12"}
+              placeholder={t("grades.slugPlaceholder", lang)}
             />
             <span className="field__hint">
-              {lang === "fr" ? "Identifiant unique (URL)" : "Unique identifier (URL)"}
+              {t("grades.slugHint", lang)}
             </span>
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
             <label className="field__label">
-              {lang === "fr" ? "Nom en français" : "French name"}
+              {t("grades.frenchName", lang)}
             </label>
             <input
               className="input"
               value={nameFr}
               onChange={(e) => setNameFr(e.target.value)}
-              placeholder={lang === "fr" ? "ex. Sixième" : "e.g. Sixième"}
+              placeholder={t("grades.frenchNamePlaceholder", lang)}
             />
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
             <label className="field__label">
-              {lang === "fr" ? "Nom en anglais" : "English name"}
+              {t("grades.englishName", lang)}
             </label>
             <input
               className="input"
               value={nameEn}
               onChange={(e) => setNameEn(e.target.value)}
-              placeholder={lang === "fr" ? "ex. Grade 6" : "e.g. Grade 6"}
+              placeholder={t("grades.englishNamePlaceholder", lang)}
             />
           </div>
         </div>
@@ -227,13 +222,7 @@ export default function GradesClient({
           onClick={create}
         >
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
-          {busy
-            ? lang === "fr"
-              ? "Création…"
-              : "Creating…"
-            : lang === "fr"
-            ? "Créer le niveau"
-            : "Create grade"}
+          {busy ? t("grades.creating", lang) : t("grades.createGrade", lang)}
         </button>
       </div>
 
@@ -249,9 +238,7 @@ export default function GradesClient({
           <span style={{ fontSize: 18 }}>💡</span>
           <div>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>
-              {lang === "fr"
-                ? "À propos des libellés bilingues"
-                : "About the dual labels"}
+              {t("grades.aboutDualLabels", lang)}
             </div>
             <div className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
               {lang === "fr" ? (

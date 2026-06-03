@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { BackLink } from "@/components/BackLink";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -351,15 +352,12 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
 
   return (
     <div style={{ paddingBottom: 96 }}>
+      <BackLink href="/admin" label={s["common.backDashboard"]} />
       {/* Page header: title + status + publish */}
       <div className="section-head" style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="row" style={{ gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
             <span className="eyebrow">{s["edit.title"]}</span>
-            <span className={`badge ${isPublished ? "badge--published" : "badge--draft"}`}>
-              <span className="dot" />
-              {isPublished ? s["dash.published"] : s["dash.draft"]}
-            </span>
           </div>
           <input
             className="input"
@@ -376,16 +374,39 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
               letterSpacing: "-0.02em",
             }}
           />
+          <input
+            className="input"
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+            placeholder={s["quiz.titleEn"]}
+            style={{
+              background: "transparent",
+              border: "1px solid transparent",
+              padding: "2px 8px",
+              fontFamily: "var(--font-display)",
+              fontWeight: 600,
+              fontSize: 20,
+              letterSpacing: "-0.01em",
+              color: "var(--text-muted)",
+            }}
+          />
         </div>
         <div className="row" style={{ flexShrink: 0 }}>
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={() => setIsPublished((v) => !v)}
-            aria-pressed={isPublished}
-          >
-            {isPublished ? s["dash.draft"] : s["dash.published"]}
-          </button>
+          <div className="switch__row">
+            <button
+              type="button"
+              role="switch"
+              className="switch"
+              aria-checked={isPublished}
+              aria-label={s["edit.published"]}
+              onClick={() => setIsPublished(!isPublished)}
+            >
+              <span className="switch__thumb" />
+            </button>
+            <span className="switch__label">
+              {isPublished ? s["dash.published"] : s["dash.draft"]}
+            </span>
+          </div>
           <button
             className="btn btn--solid btn--sm"
             onClick={save}
@@ -559,6 +580,18 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
                       )
                     }
                   />
+                  <label className="field__label" style={{ marginTop: 8 }}>{s["edit.partTitle.en"]}</label>
+                  <input
+                    className="input"
+                    value={p.titleEn ?? ""}
+                    onChange={(e) =>
+                      setParts(
+                        parts.map((pp, idx) =>
+                          idx === pi ? { ...pp, titleEn: e.target.value } : pp
+                        )
+                      )
+                    }
+                  />
                 </div>
                 <div className="field" style={{ marginBottom: 0 }}>
                   <label className="field__label">{s["edit.partSubtitle"]}</label>
@@ -570,6 +603,20 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
                         parts.map((pp, idx) =>
                           idx === pi
                             ? { ...pp, subtitleFr: e.target.value }
+                            : pp
+                        )
+                      )
+                    }
+                  />
+                  <label className="field__label" style={{ marginTop: 8 }}>{s["edit.partSubtitle.en"]}</label>
+                  <input
+                    className="input"
+                    value={p.subtitleEn ?? ""}
+                    onChange={(e) =>
+                      setParts(
+                        parts.map((pp, idx) =>
+                          idx === pi
+                            ? { ...pp, subtitleEn: e.target.value }
                             : pp
                         )
                       )
@@ -751,6 +798,13 @@ function QuestionBody({
           value={q.textFr}
           onChange={(e) => updateQ(i, { textFr: e.target.value })}
         />
+        <label className="field__label" style={{ marginTop: 8 }}>{s["edit.statement.en"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={q.textEn ?? ""}
+          onChange={(e) => updateQ(i, { textEn: e.target.value })}
+        />
       </div>
       <div className="grid grid--2">
         <div className="field">
@@ -759,6 +813,12 @@ function QuestionBody({
             className="input"
             value={q.hintFr ?? ""}
             onChange={(e) => updateQ(i, { hintFr: e.target.value })}
+          />
+          <label className="field__label" style={{ marginTop: 8 }}>{s["edit.hint.en"]}</label>
+          <input
+            className="input"
+            value={q.hintEn ?? ""}
+            onChange={(e) => updateQ(i, { hintEn: e.target.value })}
           />
         </div>
         <div className="field">
@@ -796,13 +856,21 @@ function QuestionBody({
             >
               {o.isCorrect ? "✓" : o.letter}
             </button>
-            <input
-              className="input"
-              placeholder={o.letter}
-              value={o.textFr}
-              onChange={(e) => updateOpt(i, j, { textFr: e.target.value })}
-              style={{ flex: 1 }}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+              <input
+                className="input"
+                placeholder={o.letter}
+                value={o.textFr}
+                onChange={(e) => updateOpt(i, j, { textFr: e.target.value })}
+              />
+              <input
+                className="input"
+                placeholder={s["edit.options.en"]}
+                value={o.textEn ?? ""}
+                onChange={(e) => updateOpt(i, j, { textEn: e.target.value })}
+                style={{ fontSize: 13, color: "var(--text-muted)" }}
+              />
+            </div>
             <button
               type="button"
               className="icon-btn icon-btn--danger"
@@ -837,6 +905,13 @@ function QuestionBody({
           rows={2}
           value={q.explanationFr}
           onChange={(e) => updateQ(i, { explanationFr: e.target.value })}
+        />
+        <label className="field__label" style={{ marginTop: 8 }}>{s["edit.explanation.en"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={q.explanationEn ?? ""}
+          onChange={(e) => updateQ(i, { explanationEn: e.target.value })}
         />
       </div>
 
@@ -903,6 +978,13 @@ function RemediationEditor({
           value={value.explanationFr}
           onChange={(e) => onChange({ ...value, explanationFr: e.target.value })}
         />
+        <label className="field__label" style={{ marginTop: 8 }}>{s["edit.remed.detailEn"]}</label>
+        <textarea
+          className="textarea"
+          rows={2}
+          value={value.explanationEn ?? ""}
+          onChange={(e) => onChange({ ...value, explanationEn: e.target.value })}
+        />
       </div>
       <div className="grid grid--2">
         <div className="field" style={{ marginBottom: 0 }}>
@@ -968,6 +1050,15 @@ function FollowUpsEditor({
                 onChange(followUps.map((f, x) => (x === k ? { ...f, textFr: e.target.value } : f)))
               }
             />
+            <label className="field__label" style={{ marginTop: 8 }}>{s["edit.statement.en"]}</label>
+            <textarea
+              className="textarea"
+              rows={2}
+              value={fu.textEn ?? ""}
+              onChange={(e) =>
+                onChange(followUps.map((f, x) => (x === k ? { ...f, textEn: e.target.value } : f)))
+              }
+            />
           </div>
           {fu.options.map((o, j) => (
             <div className="row" key={j} style={{ marginBottom: 8 }}>
@@ -1001,26 +1092,47 @@ function FollowUpsEditor({
               >
                 {o.isCorrect ? "✓" : o.letter}
               </button>
-              <input
-                className="input"
-                placeholder={o.letter}
-                value={o.textFr}
-                onChange={(e) =>
-                  onChange(
-                    followUps.map((f, x) =>
-                      x === k
-                        ? {
-                            ...f,
-                            options: f.options.map((oo, oi) =>
-                              oi === j ? { ...oo, textFr: e.target.value } : oo
-                            ),
-                          }
-                        : f
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                <input
+                  className="input"
+                  placeholder={o.letter}
+                  value={o.textFr}
+                  onChange={(e) =>
+                    onChange(
+                      followUps.map((f, x) =>
+                        x === k
+                          ? {
+                              ...f,
+                              options: f.options.map((oo, oi) =>
+                                oi === j ? { ...oo, textFr: e.target.value } : oo
+                              ),
+                            }
+                          : f
+                      )
                     )
-                  )
-                }
-                style={{ flex: 1 }}
-              />
+                  }
+                />
+                <input
+                  className="input"
+                  placeholder={s["edit.options.en"]}
+                  value={o.textEn ?? ""}
+                  onChange={(e) =>
+                    onChange(
+                      followUps.map((f, x) =>
+                        x === k
+                          ? {
+                              ...f,
+                              options: f.options.map((oo, oi) =>
+                                oi === j ? { ...oo, textEn: e.target.value } : oo
+                              ),
+                            }
+                          : f
+                      )
+                    )
+                  }
+                  style={{ fontSize: 13, color: "var(--text-muted)" }}
+                />
+              </div>
             </div>
           ))}
         </div>

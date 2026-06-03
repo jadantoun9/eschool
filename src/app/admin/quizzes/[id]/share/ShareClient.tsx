@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { chipClass } from "@/lib/subject-style";
+import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
+import { BackLink } from "@/components/BackLink";
 
 export default function ShareClient({
   slug,
@@ -51,6 +53,7 @@ export default function ShareClient({
 
   return (
     <>
+      <BackLink href="/admin" label={t("common.backDashboard", lang)} />
       {/* Page header */}
       <div style={{ marginBottom: 32 }}>
         <div className="row" style={{ gap: 10, marginBottom: 10 }}>
@@ -63,12 +66,12 @@ export default function ShareClient({
           {isPublished ? (
             <span className="badge badge--published">
               <span className="dot" />
-              {lang === "fr" ? "Publié" : "Published"}
+              {t("share.published", lang)}
             </span>
           ) : (
             <span className="badge badge--draft">
               <span className="dot" />
-              {lang === "fr" ? "Brouillon" : "Draft"}
+              {t("share.draft", lang)}
             </span>
           )}
         </div>
@@ -77,9 +80,7 @@ export default function ShareClient({
           <span style={{ color: "var(--text-muted)" }}>· {title}</span>
         </h1>
         <p className="muted">
-          {lang === "fr"
-            ? "Toute personne avec ce lien peut faire la fiche — sans compte."
-            : "Anyone with this link can take the worksheet — no account needed."}
+          {t("share.subheading", lang)}
         </p>
       </div>
 
@@ -112,7 +113,7 @@ export default function ShareClient({
           {/* Public link card */}
           <div className="card" style={{ marginBottom: 18, borderRadius: "var(--radius-xl)", padding: 28 }}>
             <div className="eyebrow" style={{ marginBottom: 14 }}>
-              🔗 {lang === "fr" ? "Lien public" : "Public link"}
+              🔗 {t("share.publicLink", lang)}
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
               <input
@@ -133,20 +134,18 @@ export default function ShareClient({
               className="muted"
               style={{ marginTop: 14, fontSize: 13, display: "flex", gap: 16, flexWrap: "wrap" }}
             >
-              <span>● {lang === "fr" ? "Lien actif" : "Link is live"}</span>
-              <span>● {lang === "fr" ? "Résultats anonymes" : "Results recorded anonymously"}</span>
+              <span>● {t("share.linkLive", lang)}</span>
+              <span>● {t("share.anonymous", lang)}</span>
             </div>
           </div>
 
           {/* Open / preview card */}
           <div className="card" style={{ borderRadius: "var(--radius-xl)", padding: 28 }}>
             <div className="eyebrow" style={{ marginBottom: 14 }}>
-              👁 {lang === "fr" ? "Aperçu" : "Preview"}
+              👁 {t("share.preview", lang)}
             </div>
             <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
-              {lang === "fr"
-                ? "Ouvrir la fiche comme un élève le verrait."
-                : "Open the worksheet as a student would see it."}
+              {t("share.previewDesc", lang)}
             </p>
             <a
               href={url || `/q/${slug}`}
@@ -158,7 +157,7 @@ export default function ShareClient({
                 <path d="M7 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1V9" />
                 <path d="M10 2h4v4M14 2L8 8" />
               </svg>
-              {lang === "fr" ? "Ouvrir" : "Open"}
+              {t("share.open", lang)}
             </a>
           </div>
         </div>
@@ -182,9 +181,7 @@ export default function ShareClient({
               {title}
             </div>
             <p className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-              {lang === "fr"
-                ? "À projeter au tableau — les élèves scannent avec leur téléphone"
-                : "Project on the board — students scan with phone"}
+              {t("share.qrHint", lang)}
             </p>
           </div>
         </div>

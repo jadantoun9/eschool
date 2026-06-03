@@ -33,7 +33,7 @@ Questions must be **substantive, exam-grade items**, not one-line trivia. The br
 - Vary difficulty across the quiz: early questions check prerequisites, later ones apply and combine concepts.
 - The 3 distractors must each encode a **specific, common mistake** a student actually makes — not obviously-wrong throwaways.
 - Explanations are **2–4 full sentences** that genuinely teach: state the rule, say why the correct answer is right, and name the misconception behind the most tempting wrong answer. One-liners are not acceptable.
-- Follow-ups and the retry should be just as real as the main question — same skill, fresh setting.
+- Follow-ups should be just as real as the main question — same skill, fresh setting.
 
 ### Pedagogy
 - Each question targets exactly **one skill** (give it a short `skillTag` like `"angle_inclus"` or `"newton_second_law"`).
@@ -42,7 +42,6 @@ Questions must be **substantive, exam-grade items**, not one-line trivia. The br
   - A clear, teaching explanation of the misconception or correct reasoning, 2–4 sentences (HTML allowed: `<strong>`, `<em>`).
   - **0 to 2 YouTube videos** — **browse the web** to find real, currently-working videos from high-quality channels (Khan Academy, The Organic Chemistry Tutor, Mario's Math Tutoring, etc.). Only insert a video once you have found and confirmed its real URL. **NEVER** invent, guess, or use placeholder URLs (e.g. `https://www.youtube.com/watch?v=...` or made-up IDs). If you cannot find and verify a real video for a question, **omit the `videos` array entirely** for that question — a missing video is always better than a broken or fake one.
   - **Exactly 2 follow-up questions** that test the same skill in a slightly different setting (these only appear if the student got the main question wrong).
-  - **Exactly 1 retry question** — the final check after the follow-ups.
 
 ### Bilingual content
 - **Every** text field must have both `Fr` (French) and `En` (English) versions. Translate naturally — don't word-for-word translate; adapt idioms and notation where appropriate. Use proper Unicode symbols (∠, △, ≅, ∥, °, →, ², ₁, etc.) — never use ASCII fallbacks like `triangle ABC` or `<=`.
@@ -150,18 +149,7 @@ The teacher will either upload the `.json` file or paste the text on the platfor
                   { "textFr": "D FR", "textEn": "D EN" }
                 ]
               }
-            ],
-            "retry": {
-              "textFr": "Question de vérification FR",
-              "textEn": "Verification question EN",
-              "correctIndex": 1,
-              "options": [
-                { "textFr": "A FR", "textEn": "A EN" },
-                { "textFr": "B FR", "textEn": "B EN" },
-                { "textFr": "C FR", "textEn": "C EN" },
-                { "textFr": "D FR", "textEn": "D EN" }
-              ]
-            }
+            ]
           }
         }
         // … more questions in this part …
@@ -230,18 +218,7 @@ The teacher will either upload the `.json` file or paste the text on the platfor
                   { "textFr": "Pascal (Pa)", "textEn": "Pascal (Pa)" }
                 ]
               }
-            ],
-            "retry": {
-              "textFr": "Doubler la masse en gardant la force constante divise l'accélération par :",
-              "textEn": "Doubling the mass at constant force divides the acceleration by:",
-              "correctIndex": 1,
-              "options": [
-                { "textFr": "1 (inchangée)", "textEn": "1 (unchanged)" },
-                { "textFr": "2", "textEn": "2" },
-                { "textFr": "4", "textEn": "4" },
-                { "textFr": "½", "textEn": "½" }
-              ]
-            }
+            ]
           }
         }
       ]
@@ -256,7 +233,7 @@ The teacher will either upload the `.json` file or paste the text on the platfor
 
 - Deliver the quiz as a downloadable `quiz.json` **file** when possible; otherwise output **JSON only** (no markdown code fences, no "Here is the JSON:", no comments).
 - All `correctIndex` values must be 0–3.
-- Every question (main, follow-up, retry) must have exactly 4 options.
+- Every question (main and follow-up) must have exactly 4 options.
 - Every text field has both `Fr` and `En` variants.
 - **Videos: only real, web-verified YouTube URLs. Never placeholders or guesses — omit the `videos` array if you can't verify a real link.**
 - Use real Unicode for symbols: ∠ △ ≅ ∥ ° → ² ₁ ½ · α β π, etc.

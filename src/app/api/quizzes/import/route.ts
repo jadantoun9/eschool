@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         videoTitle2: v1?.label ?? null,
       });
 
-      const children = [...q.remediation.followups, q.remediation.retry];
+      const children = [...q.remediation.followups];
       children.forEach((child, ci) => {
         const childId = randomUUID();
         questionRows.push({

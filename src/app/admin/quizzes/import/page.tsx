@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getLang } from "@/lib/lang";
+import { t } from "@/lib/i18n";
 import ImportClient from "./ImportClient";
 
 export default async function ImportQuizPage() {
@@ -13,7 +14,7 @@ export default async function ImportQuizPage() {
       <div className="section-head">
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
-            {lang === "fr" ? "Importer une fiche" : "Import worksheet"}
+            {t("import.eyebrow", lang)}
           </div>
           <h1 className="h1" style={{ marginBottom: 8 }}>
             {lang === "fr" ? (
@@ -27,9 +28,7 @@ export default async function ImportQuizPage() {
             )}
           </h1>
           <p className="muted" style={{ maxWidth: 620 }}>
-            {lang === "fr"
-              ? "Téléchargez le modèle, donnez-le à ChatGPT ou Claude avec votre sujet, puis déposez ici le fichier obtenu. Nous l'affichons avant l'enregistrement."
-              : "Download the template, give it to ChatGPT or Claude with your topic, then drop the file it gives you back here. We'll preview it before saving."}
+            {t("import.desc", lang)}
           </p>
         </div>
       </div>

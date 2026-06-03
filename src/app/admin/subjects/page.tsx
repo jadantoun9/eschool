@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
-import { dict } from "@/lib/i18n";
+import { dict, t } from "@/lib/i18n";
+import { BackLink } from "@/components/BackLink";
 import SubjectsClient from "./SubjectsClient";
 
 export default async function SubjectsAdminPage() {
@@ -15,6 +16,7 @@ export default async function SubjectsAdminPage() {
 
   return (
     <>
+      <BackLink href="/admin" label={t("common.backDashboard", lang)} />
       <div
         style={{
           display: "flex",
@@ -27,22 +29,20 @@ export default async function SubjectsAdminPage() {
       >
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
-            📚 {lang === "fr" ? "Catalogue" : "Catalogue"}
+            📚 {t("subjects.catalogueLabel", lang)}
           </div>
           <h1 className="h1" style={{ marginBottom: 6 }}>
-            {lang === "fr" ? "Matières" : "Subjects"}
+            {t("subjects.pageTitle", lang)}
           </h1>
           <p className="muted">
-            {lang === "fr"
-              ? "Les catégories sous lesquelles les fiches sont organisées."
-              : "The top-level categories worksheets are organized under."}
+            {t("subjects.pageSubtitle", lang)}
           </p>
         </div>
         <div className="stats">
           <div className="stat">
             <div className="stat__num numeric">{subjects.length}</div>
             <div className="stat__label">
-              {lang === "fr" ? "Matières" : "Subjects"}
+              {t("subjects.pageTitle", lang)}
             </div>
           </div>
         </div>
