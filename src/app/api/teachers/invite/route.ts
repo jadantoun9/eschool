@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { customAlphabet } from "nanoid";
-
-const token = customAlphabet("abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789", 32);
+import { makeInviteToken, inviteExpiry } from "@/lib/invite";
 
 const Body = z.object({
   email: z.string().email(),
@@ -23,14 +21,20 @@ export async function POST(req: Request) {
   const existing = await prisma.teacher.findUnique({ where: { email } });
   if (existing) return NextResponse.json({ error: "Email already used" }, { status: 409 });
 
-  const inviteToken = token();
+  const inviteToken = makeInviteToken();
   const teacher = await prisma.teacher.create({
-    data: { email, name: parsed.data.name, role: "TEACHER", inviteToken },
+    data: {
+      email,
+      name: parsed.data.name,
+      role: "TEACHER",
+      inviteToken,
+      inviteTokenExpires: inviteExpiry(),
+    },
   });
   return NextResponse.json({
     id: teacher.id,
     email: teacher.email,
-    // The super-admin copies this link manually (no email sender in MVP).
+    // The super-admin sends this link to the teacher (mailto in the UI).
     inviteUrl: `/admin/accept-invite?token=${inviteToken}`,
   });
 }

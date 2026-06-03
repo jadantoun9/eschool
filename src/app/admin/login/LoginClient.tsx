@@ -15,6 +15,8 @@ export default function LoginClient({
   const s = strings;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [keep, setKeep] = useState(true);
+  const [showForgot, setShowForgot] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,11 +37,11 @@ export default function LoginClient({
 
   return (
     <div style={{
-      minHeight: "calc(100vh - 80px)",
+      minHeight: "100vh",
       display: "flex",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "center",
-      padding: "40px 24px",
+      padding: "clamp(48px, 9vh, 110px) 24px 48px",
     }}>
       <div style={{
         width: "100%",
@@ -52,8 +54,13 @@ export default function LoginClient({
         position: "relative",
       }}>
         {/* Brand mark */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 28 }}>
-          <Image src="/ice-logo.png" alt="ICE" width={64} height={64} priority />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 24 }}>
+          <span className="brand__mark" style={{ width: 36, height: 36 }}>
+            <Image src="/ice-logo.png" alt="ICE" width={36} height={36} priority />
+          </span>
+          <span className="brand__word" style={{ fontSize: 18 }}>
+            <b>ICE</b> Learning
+          </span>
         </div>
 
         <h1 style={{
@@ -122,7 +129,23 @@ export default function LoginClient({
           </div>
 
           <div className="field">
-            <label className="field__label" htmlFor="password">{s["login.password"]}</label>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+              <label className="field__label" htmlFor="password">{s["login.password"]}</label>
+              <button
+                type="button"
+                onClick={() => setShowForgot((v) => !v)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "var(--text-muted)",
+                }}
+              >
+                {s["login.forgot"]}
+              </button>
+            </div>
             <input
               id="password"
               className="input"
@@ -133,13 +156,38 @@ export default function LoginClient({
               autoComplete="current-password"
               placeholder="••••••••"
             />
+            {showForgot && <span className="field__hint">{s["login.forgotHint"]}</span>}
           </div>
+
+          {/* Keep me signed in */}
+          <label
+            className="row"
+            style={{
+              gap: 10,
+              alignItems: "center",
+              marginBottom: 20,
+              fontSize: 13,
+              color: "var(--text-muted)",
+              cursor: "pointer",
+            }}
+          >
+            <span
+              className={`checkbox${keep ? " checkbox--checked" : ""}`}
+              style={{ flexShrink: 0 }}
+              onClick={() => setKeep((v) => !v)}
+              role="checkbox"
+              aria-checked={keep}
+            >
+              {keep ? "✓" : ""}
+            </span>
+            <span>{s["login.keep"]}</span>
+          </label>
 
           <button
             type="submit"
             disabled={busy}
             className="btn btn--primary"
-            style={{ width: "100%", marginTop: 4 }}
+            style={{ width: "100%" }}
           >
             {busy ? (
               <>
@@ -150,6 +198,11 @@ export default function LoginClient({
             )}
           </button>
         </form>
+
+        <p className="muted" style={{ textAlign: "center", fontSize: 13, marginTop: 20 }}>
+          {s["login.noAccount"]}{" "}
+          <span style={{ color: "var(--accent)", fontWeight: 600 }}>{s["login.askInvite"]}</span>
+        </p>
       </div>
     </div>
   );

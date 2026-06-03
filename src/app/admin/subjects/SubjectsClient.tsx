@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { chipClass } from "@/lib/subject-style";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { Lang } from "@/lib/i18n";
 
 type Subject = {
@@ -41,7 +42,9 @@ const pickerOptActive: React.CSSProperties = {
 
 const subjCardBase: React.CSSProperties = {
   background: "var(--surface)",
-  border: "1px solid var(--border)",
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "var(--border)",
   borderRadius: "var(--radius-lg)",
   padding: 22,
   transition: "background 120ms, border-color 120ms",
@@ -72,6 +75,7 @@ function SubjectCard({
   onDeleted: () => void;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [nameFr, setNameFr] = useState(subject.nameFr);
   const [nameEn, setNameEn] = useState(subject.nameEn);
@@ -93,7 +97,16 @@ function SubjectCard({
   }
 
   async function del() {
-    if (!confirm(lang === "fr" ? "Supprimer cette matière ?" : "Delete this subject?")) return;
+    const ok = await confirm({
+      title: lang === "fr" ? "Supprimer cette matière ?" : "Delete this subject?",
+      description:
+        lang === "fr"
+          ? "Cette action est définitive et ne peut pas être annulée."
+          : "This action is permanent and cannot be undone.",
+      confirmText: lang === "fr" ? "Supprimer" : "Delete",
+      cancelText: lang === "fr" ? "Annuler" : "Cancel",
+    });
+    if (!ok) return;
     await fetch(`/api/subjects/${subject.id}`, { method: "DELETE" });
     onDeleted();
     router.refresh();

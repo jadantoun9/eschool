@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { AdminNav } from "@/components/AdminNav";
 import { signOut } from "@/lib/auth";
 
 function BrandMark() {
@@ -69,13 +70,12 @@ export async function SiteNav({ mode = "public" }: { mode?: "public" | "admin" }
           </div>
         )}
         {mode === "admin" && (
-          <div className="subjects-nav">
-            {adminItems.map((it) => (
-              <Link key={it.href} href={it.href} className="pill">
-                {lang === "fr" ? it.fr : it.en}
-              </Link>
-            ))}
-          </div>
+          <AdminNav
+            items={adminItems.map((it) => ({
+              href: it.href,
+              label: lang === "fr" ? it.fr : it.en,
+            }))}
+          />
         )}
       </div>
 

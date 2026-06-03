@@ -178,7 +178,12 @@ input, textarea, select { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .pill:hover { background: var(--surface-hover); border-color: var(--border-strong); }
-.pill--active { background: var(--surface-2); border-color: var(--border-strong); }
+.pill--active {
+  background: rgba(255, 204, 0, 0.12);
+  border-color: rgba(255, 204, 0, 0.45);
+  color: var(--accent);
+}
+.pill--active:hover { background: rgba(255, 204, 0, 0.16); border-color: rgba(255, 204, 0, 0.55); }
 .pill .ico { font-size: 16px; line-height: 1; }
 .pill .caret { opacity: 0.5; margin-left: 2px; font-size: 10px; }
 
@@ -704,3 +709,44 @@ section { position: relative; z-index: 1; }
    ============================================================ */
 
 [data-radix-popper-content-wrapper] { z-index: 1100 !important; }
+
+/* Custom confirm dialog (replaces native window.confirm) */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.confirm-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1201;
+  width: calc(100% - 40px);
+  max-width: 420px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  outline: none;
+}
+.confirm-overlay[data-state="open"] { animation: confirm-fade 120ms ease-out; }
+.confirm-overlay[data-state="closed"] { animation: confirm-fade 100ms ease-in reverse; }
+.confirm-card[data-state="open"] { animation: confirm-pop 130ms cubic-bezier(0.2, 0.8, 0.3, 1); }
+.confirm-card[data-state="closed"] { animation: confirm-pop 100ms ease-in reverse; }
+
+@keyframes confirm-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes confirm-pop {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-overlay, .confirm-card { animation: none; }
+}

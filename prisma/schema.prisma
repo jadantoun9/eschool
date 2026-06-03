@@ -13,14 +13,15 @@ enum Role {
 }
 
 model Teacher {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?
-  name         String
-  role         Role     @default(TEACHER)
-  inviteToken  String?  @unique
-  quizzes      Quiz[]
-  createdAt    DateTime @default(now())
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String?
+  name               String
+  role               Role      @default(TEACHER)
+  inviteToken        String?   @unique
+  inviteTokenExpires DateTime?
+  quizzes            Quiz[]
+  createdAt          DateTime  @default(now())
 }
 
 model Subject {

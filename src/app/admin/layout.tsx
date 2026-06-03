@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SiteNav } from "@/components/SiteNav";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { getLang } from "@/lib/lang";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -38,14 +39,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="page">
-      <div className="page-inner">
-        <SiteNav mode="admin" />
-        <main className="section">
-          <div className="container">{children}</div>
-        </main>
+    <ConfirmProvider>
+      <div className="page">
+        <div className="page-inner">
+          <SiteNav mode="admin" />
+          <main className="section">
+            <div className="container">{children}</div>
+          </main>
+        </div>
+        <Toaster theme="dark" richColors position="top-right" />
       </div>
-      <Toaster theme="dark" richColors position="top-right" />
-    </div>
+    </ConfirmProvider>
   );
 }

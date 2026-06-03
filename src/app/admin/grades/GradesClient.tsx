@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { Lang } from "@/lib/i18n";
 
 type Grade = { id: string; slug: string; nameFr: string; nameEn: string; order: number };
@@ -14,6 +16,7 @@ export default function GradesClient({
   grades: Grade[];
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [slug, setSlug] = useState("");
   const [nameFr, setNameFr] = useState("");
   const [nameEn, setNameEn] = useState("");
@@ -39,9 +42,34 @@ export default function GradesClient({
     router.refresh();
   }
 
-  // Delete is not yet supported by the API; placeholder kept for future use
-  async function deleteGrade(_id: string) {
-    alert(lang === "fr" ? "Suppression non disponible." : "Delete not yet available.");
+  async function deleteGrade(g: Grade) {
+    await confirm({
+      title:
+        lang === "fr"
+          ? `Supprimer « ${g.nameFr} » ?`
+          : `Delete "${g.nameEn}"?`,
+      description:
+        lang === "fr"
+          ? "Cette action est définitive. Un niveau utilisé par des fiches ne peut pas être supprimé."
+          : "This action is permanent. A grade used by existing worksheets cannot be deleted.",
+      confirmText: lang === "fr" ? "Supprimer" : "Delete",
+      cancelText: lang === "fr" ? "Annuler" : "Cancel",
+      // Runs inside the dialog: button shows a spinner and the dialog stays
+      // open until the request resolves.
+      onConfirm: async () => {
+        const res = await fetch(`/api/grades/${g.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const msg = (await res.json().catch(() => null))?.error;
+          toast.error(
+            msg ?? (lang === "fr" ? "Échec de la suppression." : "Failed to delete.")
+          );
+          // Throw so the dialog stays open after a failed delete.
+          throw new Error(msg ?? "delete failed");
+        }
+        toast.success(lang === "fr" ? "Niveau supprimé." : "Grade deleted.");
+        router.refresh();
+      },
+    });
   }
 
   return (
@@ -102,7 +130,7 @@ export default function GradesClient({
                     <button
                       className="icon-btn icon-btn--danger"
                       title={lang === "fr" ? "Supprimer" : "Delete"}
-                      onClick={() => deleteGrade(g.id)}
+                      onClick={() => deleteGrade(g)}
                     >
                       <svg
                         width="14"

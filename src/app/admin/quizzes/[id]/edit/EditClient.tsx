@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/Spinner";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -100,6 +101,7 @@ function emptyFollowUp(): FollowUp {
 export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: Record<string, string> }) {
   const s = strings;
   const router = useRouter();
+  const confirm = useConfirm();
 
   const [titleFr, setTitleFr] = useState(quiz.titleFr);
   const [titleEn, setTitleEn] = useState(quiz.titleEn ?? "");
@@ -523,14 +525,15 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
                 <button
                   className="icon-btn icon-btn--danger"
                   title={s["edit.delete"]}
-                  onClick={() => {
-                    if (
-                      partQuestions.length > 0 &&
-                      !window.confirm(
-                        `This part has ${partQuestions.length} question(s). Delete the part and all its questions?`
-                      )
-                    )
-                      return;
+                  onClick={async () => {
+                    if (partQuestions.length > 0) {
+                      const ok = await confirm({
+                        title: "Delete this part?",
+                        description: `This part has ${partQuestions.length} question(s). Deleting it will remove the part and all of its questions.`,
+                        confirmText: "Delete part",
+                      });
+                      if (!ok) return;
+                    }
                     setQuestions((qs) =>
                       qs.filter((qq) => qq.partClientId !== p.clientId)
                     );

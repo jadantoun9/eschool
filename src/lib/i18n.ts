@@ -33,6 +33,7 @@ export const dict = {
     "invite.submit": "Create my account",
     "invite.mismatch": "Passwords do not match.",
     "invite.invalidLink": "Invalid link.",
+    "invite.expired": "This invite has expired. Ask your school admin to send a new one.",
     "invite.expires": "This invite expires in 7 days.",
 
     // dashboard
@@ -244,6 +245,7 @@ export const dict = {
     "invite.submit": "Créer mon compte",
     "invite.mismatch": "Les mots de passe ne correspondent pas.",
     "invite.invalidLink": "Lien invalide.",
+    "invite.expired": "Cette invitation a expiré. Demandez-en une nouvelle à l'administrateur de votre école.",
     "invite.expires": "Cette invitation expire dans 7 jours.",
 
     "dash.title": "Mes fiches",

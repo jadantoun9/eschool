@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmDialog";
 import type { Lang } from "@/lib/i18n";
 
 type T = {
@@ -23,6 +24,22 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+// Open the user's mail app with the invite link pre-filled to the recipient.
+function openInviteEmail(opts: { email: string; name: string; link: string; lang: Lang }) {
+  const { email, name, link, lang } = opts;
+  const subject =
+    lang === "fr"
+      ? "Votre invitation à ICE Learning"
+      : "Your ICE Learning invitation";
+  const body =
+    lang === "fr"
+      ? `Bonjour ${name},\n\nVous êtes invité à rejoindre ICE Learning. Cliquez sur le lien ci-dessous pour configurer votre compte :\n\n${link}\n\nCette invitation expire dans 7 jours.`
+      : `Hi ${name},\n\nYou've been invited to join ICE Learning. Use the link below to set up your account:\n\n${link}\n\nThis invite expires in 7 days.`;
+  window.location.href = `mailto:${encodeURIComponent(
+    email
+  )}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 const AVATAR_GRADIENTS = [
   "linear-gradient(135deg, #ef4444, #b91c1c)",
   "linear-gradient(135deg, #3b82f6, #1e40af)",
@@ -42,6 +59,7 @@ export default function TeachersClient({
 }) {
   const s = strings;
   const router = useRouter();
+  const confirm = useConfirm();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,7 +81,9 @@ export default function TeachersClient({
       return;
     }
     const data = await res.json();
-    setLink(`${window.location.origin}${data.inviteUrl}`);
+    const inviteLink = `${window.location.origin}${data.inviteUrl}`;
+    setLink(inviteLink);
+    openInviteEmail({ email, name, link: inviteLink, lang });
     setEmail("");
     setName("");
     router.refresh();
@@ -332,15 +352,26 @@ export default function TeachersClient({
                         className="btn btn--ghost btn--sm"
                         title={lang === "fr" ? "Renvoyer" : "Resend"}
                         onClick={async () => {
-                          const res = await fetch("/api/teachers/invite", {
-                            method: "POST",
-                            headers: { "content-type": "application/json" },
-                            body: JSON.stringify({
-                              email: teacher.email,
-                              name: teacher.name,
-                            }),
+                          // Rotate the token server-side (old link dies, clock resets),
+                          // then open a fresh mail draft with the new link.
+                          const res = await fetch(
+                            `/api/teachers/${teacher.id}/resend`,
+                            { method: "POST" }
+                          );
+                          // Error responses may have an empty/non-JSON body
+                          // (e.g. a 500), so parse defensively.
+                          const data = await res.json().catch(() => null);
+                          if (!res.ok) {
+                            setErr(data?.error ?? (lang === "fr" ? "Erreur" : "Error"));
+                            return;
+                          }
+                          openInviteEmail({
+                            email: teacher.email,
+                            name: teacher.name,
+                            link: `${window.location.origin}${data.inviteUrl}`,
+                            lang,
                           });
-                          if (res.ok) router.refresh();
+                          router.refresh();
                         }}
                       >
                         {lang === "fr" ? "Renvoyer" : "Resend"}
@@ -350,14 +381,19 @@ export default function TeachersClient({
                       className="icon-btn icon-btn--danger"
                       title={lang === "fr" ? "Supprimer" : "Remove"}
                       onClick={async () => {
-                        if (
-                          !confirm(
+                        const ok = await confirm({
+                          title:
                             lang === "fr"
                               ? `Supprimer ${teacher.name} ?`
-                              : `Remove ${teacher.name}?`
-                          )
-                        )
-                          return;
+                              : `Remove ${teacher.name}?`,
+                          description:
+                            lang === "fr"
+                              ? "L'enseignant perdra l'accès immédiatement."
+                              : "This teacher will lose access immediately.",
+                          confirmText: lang === "fr" ? "Supprimer" : "Remove",
+                          cancelText: lang === "fr" ? "Annuler" : "Cancel",
+                        });
+                        if (!ok) return;
                         await fetch(`/api/teachers/${teacher.id}`, {
                           method: "DELETE",
                         });
