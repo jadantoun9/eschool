@@ -241,14 +241,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
       </div>
 
       {/* Two-panel row: score distribution + recent submissions */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 18,
-          marginBottom: 24,
-        }}
-      >
+      <div className="two-col" style={{ marginBottom: 24 }}>
         {/* Score distribution */}
         <div className="card" style={{ padding: 24 }}>
           <div
@@ -538,6 +531,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
             <p>{t("results.empty", lang)}</p>
           </div>
         ) : (
+          <div className="table-scroll">
           <table className="table">
             <thead>
               <tr>
@@ -580,6 +574,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </>

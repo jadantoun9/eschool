@@ -31,15 +31,7 @@ export default async function HomePage() {
         {/* HERO */}
         <section className="section" style={{ paddingTop: 40, paddingBottom: 24 }}>
           <div className="container">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "minmax(0,1.05fr) minmax(0,1fr)",
-                gap: 80,
-                alignItems: "center",
-              }}
-              className="hero-grid"
-            >
+            <div className="hero-grid">
               <div>
                 <div className="eyebrow" style={{ marginBottom: 28 }}>
                   <span className="ico">📚</span>

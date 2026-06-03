@@ -135,16 +135,13 @@ export default function TeachersClient({
 
       {/* Invite card */}
       <div
+        className="invite-grid"
         style={{
           background:
             "linear-gradient(135deg, rgba(255,204,0,0.08), rgba(255,204,0,0.02))",
           border: "1px solid rgba(255,204,0,0.25)",
           borderRadius: "var(--radius-xl)",
           padding: "24px 28px",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr auto",
-          gap: 14,
-          alignItems: "end",
           marginBottom: 28,
         }}
       >
@@ -247,6 +244,7 @@ export default function TeachersClient({
       )}
 
       {/* Teachers table */}
+      <div className="table-scroll">
       <table className="table">
         <thead>
           <tr>
@@ -412,6 +410,7 @@ export default function TeachersClient({
           })}
         </tbody>
       </table>
+      </div>
 
       <div style={{ height: 80 }} />
     </>

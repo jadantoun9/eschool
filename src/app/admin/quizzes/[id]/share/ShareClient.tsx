@@ -100,14 +100,7 @@ export default function ShareClient({
       )}
 
       {/* Two-column share grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.1fr 1fr",
-          gap: 24,
-          alignItems: "start",
-        }}
-      >
+      <div className="two-col" style={{ gap: 24, alignItems: "start" }}>
         {/* Left column */}
         <div>
           {/* Public link card */}

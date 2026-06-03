@@ -119,6 +119,7 @@ export default async function AdminDashboard() {
           </Link>
         </div>
       ) : (
+        <div className="table-scroll">
         <table className="table">
           <thead>
             <tr>
@@ -171,6 +172,7 @@ export default async function AdminDashboard() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <div style={{ height: 80 }} />

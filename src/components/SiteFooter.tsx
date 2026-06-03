@@ -14,14 +14,7 @@ export async function SiteFooter() {
   return (
     <footer style={{ borderTop: "1px solid var(--border)", marginTop: 24, padding: "48px 0 56px" }}>
       <div className="container">
-        <div
-          style={{
-            display: "grid",
-            gap: 48,
-            gridTemplateColumns: "2fr 1fr 1fr",
-            alignItems: "start",
-          }}
-        >
+        <div className="footer-grid">
           <div>
             <h3 className="h3" style={{ color: "#fff" }}>ICE Learning</h3>
             <p className="muted" style={{ marginTop: 8, maxWidth: 420, fontSize: 14 }}>
@@ -59,6 +52,8 @@ export async function SiteFooter() {
           style={{
             display: "flex",
             justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 8,
             marginTop: 32,
             paddingTop: 24,
             borderTop: "1px solid var(--border)",
