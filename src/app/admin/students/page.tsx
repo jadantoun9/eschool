@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { RefreshOnMount } from "@/components/RefreshOnMount";
+import { RowLink } from "@/components/RowLink";
 import { scoreColor, scorePct, studentKey, submissionScope } from "@/lib/students";
 
 export default async function StudentsPage() {
@@ -102,7 +103,7 @@ export default async function StudentsPage() {
               {rows.map((st) => {
                 const avg = Math.round(st.pctSum / st.count);
                 return (
-                  <tr key={st.key}>
+                  <RowLink key={st.key} href={`/admin/students/${st.key}`}>
                     <td style={{ fontWeight: 600 }}>
                       <Link href={`/admin/students/${st.key}`}>{st.name}</Link>
                     </td>
@@ -119,7 +120,7 @@ export default async function StudentsPage() {
                         {t("students.view", lang)}
                       </Link>
                     </td>
-                  </tr>
+                  </RowLink>
                 );
               })}
             </tbody>

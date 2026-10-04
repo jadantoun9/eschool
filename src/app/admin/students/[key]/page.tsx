@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { BackLink } from "@/components/BackLink";
+import { RowLink } from "@/components/RowLink";
 import { scoreColor, scorePct, studentKey, submissionScope } from "@/lib/students";
 
 export default async function StudentPage({ params }: { params: Promise<{ key: string }> }) {
@@ -85,7 +86,7 @@ export default async function StudentPage({ params }: { params: Promise<{ key: s
               const href = `/admin/students/${key}/${s.id}`;
               const title = lang === "en" && s.quiz.titleEn ? s.quiz.titleEn : s.quiz.titleFr;
               return (
-                <tr key={s.id}>
+                <RowLink key={s.id} href={href}>
                   <td style={{ fontWeight: 600 }}>
                     <Link href={href}>{title}</Link>
                     <span className="badge badge--grade" style={{ marginLeft: 8 }}>
@@ -107,7 +108,7 @@ export default async function StudentPage({ params }: { params: Promise<{ key: s
                       {t("students.viewAnswers", lang)}
                     </Link>
                   </td>
-                </tr>
+                </RowLink>
               );
             })}
           </tbody>
