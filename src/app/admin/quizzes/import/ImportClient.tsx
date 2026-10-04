@@ -229,12 +229,22 @@ function MiniChoices({
   );
 }
 
-export default function ImportClient({ lang }: { lang: Lang }) {
+// `initialData` skips the upload step and opens the preview directly (used by
+// the automatic AI generation page); `onStartOver` then replaces "Start over".
+export default function ImportClient({
+  lang,
+  initialData,
+  onStartOver,
+}: {
+  lang: Lang;
+  initialData?: QuizImport;
+  onStartOver?: () => void;
+}) {
   const router = useRouter();
-  const [stage, setStage] = useState<Stage>("input");
+  const [stage, setStage] = useState<Stage>(initialData ? "preview" : "input");
   const [raw, setRaw] = useState("");
   const [err, setErr] = useState<string | null>(null);
-  const [data, setData] = useState<QuizImport | null>(null);
+  const [data, setData] = useState<QuizImport | null>(initialData ?? null);
   const [busy, setBusy] = useState(false);
   const [videoChecked, setVideoChecked] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -1131,7 +1141,7 @@ export default function ImportClient({ lang }: { lang: Lang }) {
           {t("import.actionBarHint", lang)}
         </div>
         <div className="row">
-          <button type="button" className="btn btn--ghost" onClick={() => { setView("preview"); setStage("input"); }}>
+          <button type="button" className="btn btn--ghost" onClick={() => { if (onStartOver) { onStartOver(); return; } setView("preview"); setStage("input"); }}>
             ← {t("import.startOverBtn", lang)}
           </button>
           <button

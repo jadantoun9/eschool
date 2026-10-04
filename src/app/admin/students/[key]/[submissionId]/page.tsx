@@ -5,6 +5,7 @@ import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { BackLink } from "@/components/BackLink";
 import { AnswerList, type AnswerListAnswer } from "@/components/AnswerList";
+import { SubmissionSummary } from "@/components/SubmissionSummary";
 import { scoreColor, scorePct, studentKey } from "@/lib/students";
 
 const optionSelect = {
@@ -31,11 +32,16 @@ export default async function StudentSubmissionPage({
           teacherId: true,
           titleFr: true,
           titleEn: true,
+          parts: {
+            orderBy: { order: "asc" },
+            select: { id: true, titleFr: true, titleEn: true },
+          },
           questions: {
             where: { parentId: null },
             orderBy: { order: "asc" },
             select: {
               id: true,
+              partId: true,
               skillTag: true,
               textFr: true,
               textEn: true,
@@ -92,6 +98,8 @@ export default async function StudentSubmissionPage({
           </div>
         </div>
       </div>
+
+      <SubmissionSummary parts={sub.quiz.parts} questions={sub.quiz.questions} answers={answers} lang={lang} />
 
       <AnswerList questions={sub.quiz.questions} answers={answers} lang={lang} />
 

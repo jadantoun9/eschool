@@ -229,6 +229,14 @@ export const dict = {
     "students.incorrect": "Incorrect",
     "students.noAnswer": "No answer",
     "students.studentAnswer": "Student's answer",
+    "students.summary": "Summary",
+    "students.strongestPart": "Strongest",
+    "students.weakestPart": "Needs most work",
+    "students.evenAcrossParts": "Same level across every part.",
+    "students.strengths": "Strengths",
+    "students.weaknesses": "To work on",
+    "students.noStrengths": "No question answered correctly yet.",
+    "students.noWeaknesses": "Every question answered correctly.",
 
     // landing / browse
     "home.badge": "Adaptive learning platform",
@@ -708,6 +716,14 @@ export const dict = {
     "students.incorrect": "Incorrect",
     "students.noAnswer": "Pas de réponse",
     "students.studentAnswer": "Réponse de l'élève",
+    "students.summary": "Synthèse",
+    "students.strongestPart": "Point fort",
+    "students.weakestPart": "À renforcer en priorité",
+    "students.evenAcrossParts": "Même niveau sur toutes les parties.",
+    "students.strengths": "Points forts",
+    "students.weaknesses": "À retravailler",
+    "students.noStrengths": "Aucune réponse juste pour l'instant.",
+    "students.noWeaknesses": "Toutes les réponses sont justes.",
 
     // landing / browse
     "home.badge": "Plateforme d'apprentissage adaptative",

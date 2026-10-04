@@ -90,7 +90,7 @@ export function AnswerList({
         const answer = answers[q.id];
         const followUps = q.followUps.filter((fu) => answers[fu.id]);
         return (
-          <div key={q.id} className="card" style={{ padding: 20 }}>
+          <div key={q.id} id={`q-${idx + 1}`} className="card" style={{ padding: 20, scrollMarginTop: 24 }}>
             <div className="row" style={{ gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
               <span className="badge badge--grade">Q{idx + 1}</span>
               <StatusBadge answer={answer} lang={lang} />
