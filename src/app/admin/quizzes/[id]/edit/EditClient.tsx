@@ -121,6 +121,33 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // Publishes/unpublishes immediately (same as the dashboard switch), without
+  // waiting for "Save".
+  const [togglingPublish, setTogglingPublish] = useState(false);
+  async function requestTogglePublish() {
+    if (togglingPublish) return;
+    const next = !isPublished;
+    await confirm({
+      title: next ? s["dash.confirmPublish.title"] : s["dash.confirmUnpublish.title"],
+      description: next ? s["dash.confirmPublish.desc"] : s["dash.confirmUnpublish.desc"],
+      confirmText: next ? s["dash.confirmPublish.confirm"] : s["dash.confirmUnpublish.confirm"],
+      cancelText: s["dash.cancel"],
+      tone: next ? "default" : "danger",
+      onConfirm: async () => {
+        setTogglingPublish(true);
+        const res = await fetch(`/api/quizzes/${quiz.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ isPublished: next }),
+        });
+        setTogglingPublish(false);
+        if (!res.ok) throw new Error("Failed to update status");
+        setIsPublished(next);
+        router.refresh();
+      },
+    });
+  }
+
   const [prelim, setPrelim] = useState({
     badgeFr: quiz.prelimBadgeFr ?? "",
     badgeEn: quiz.prelimBadgeEn ?? "",
@@ -425,27 +452,41 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
 
       <div className="col" style={{ gap: 16 }}>
         {/* Student link card */}
-        <div className="card row" style={{ flexWrap: "wrap", gap: 12 }}>
-          <span className="field__label" style={{ whiteSpace: "nowrap" }}>
-            {s["share.linkLabel"] ?? "Student link"}
-          </span>
-          <input
-            className="input"
-            readOnly
-            value={studentUrl}
-            onFocus={(e) => e.currentTarget.select()}
-            disabled={!isPublished}
-            style={{ flex: 1, minWidth: 200, opacity: isPublished ? 1 : 0.5 }}
-          />
-          <button
-            type="button"
-            className="btn btn--ghost btn--sm"
-            onClick={copyLink}
-            disabled={!isPublished}
-            title={!isPublished ? s["share.warning"] : undefined}
-          >
-            {copied ? s["share.copied"] : s["share.copy"]}
-          </button>
+        <div className="card col" style={{ gap: 12 }}>
+          <div className="row" style={{ flexWrap: "wrap", gap: 12 }}>
+            <span className="field__label" style={{ whiteSpace: "nowrap" }}>
+              {s["share.linkLabel"] ?? "Student link"}
+            </span>
+            <input
+              className="input"
+              readOnly
+              value={studentUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              disabled={!isPublished}
+              style={{ flex: 1, minWidth: 200, opacity: isPublished ? 1 : 0.5 }}
+            />
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={copyLink}
+              disabled={!isPublished}
+              title={!isPublished ? s["share.warning"] : undefined}
+            >
+              {copied ? s["share.copied"] : s["share.copy"]}
+            </button>
+          </div>
+          <div className="row" style={{ justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className={`btn btn--sm ${isPublished ? "btn--ghost" : "btn--primary"}`}
+              onClick={requestTogglePublish}
+              disabled={togglingPublish}
+            >
+              {isPublished
+                ? s["dash.confirmUnpublish.confirm"]
+                : s["dash.confirmPublish.confirm"]}
+            </button>
+          </div>
         </div>
 
         {/* Intro activity (collapsible) */}

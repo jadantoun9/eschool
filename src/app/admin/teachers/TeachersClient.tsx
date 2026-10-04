@@ -13,6 +13,7 @@ type T = {
   role: string;
   status: "active" | "pending";
   inviteToken: string | null;
+  worksheetCount: number;
   createdAt: string;
 };
 
@@ -251,6 +252,9 @@ export default function TeachersClient({
             <th>{s["teachers.col.name"]}</th>
             <th>{s["teachers.col.email"]}</th>
             <th>{s["teachers.col.role"]}</th>
+            <th style={{ width: 120, textAlign: "right" as const }}>
+              {t("teachers.col.worksheets", lang)}
+            </th>
             <th style={{ width: 160 }}>{t("teachers.col.joined", lang)}</th>
             <th style={{ width: 120 }}>{s["teachers.col.status"]}</th>
             <th style={{ width: 80, textAlign: "right" as const }}>
@@ -310,6 +314,11 @@ export default function TeachersClient({
                       {s["teachers.teacher"]}
                     </span>
                   )}
+                </td>
+
+                {/* Worksheets */}
+                <td className="numeric" style={{ textAlign: "right" }}>
+                  {teacher.worksheetCount}
                 </td>
 
                 {/* Joined */}

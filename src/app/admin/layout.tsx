@@ -44,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="page-inner">
           <SiteNav mode="admin" />
           <main className="section">
-            <div className="container">{children}</div>
+            <div className="container container--wide">{children}</div>
           </main>
         </div>
         <Toaster theme="dark" richColors position="top-right" />

@@ -269,6 +269,7 @@ input, textarea, select { font: inherit; color: inherit; }
   margin: 0 auto;
   padding: 0 56px;
 }
+.container--wide { max-width: 1520px; }
 .container--narrow { max-width: 880px; }
 .container--form { max-width: 640px; }
 

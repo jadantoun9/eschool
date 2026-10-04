@@ -41,7 +41,8 @@ export async function SiteNav({ mode = "public" }: { mode?: "public" | "admin" }
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
   const adminItems = [
-    { href: "/admin", en: "Quizzes", fr: "Fiches" },
+    { href: "/admin", en: "Interactive worksheets", fr: "Fiches" },
+    { href: "/admin/students", en: "Students", fr: "Élèves" },
     ...(isSuperAdmin
       ? [
           { href: "/admin/subjects", en: "Subjects", fr: "Matières" },

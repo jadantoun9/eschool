@@ -3,6 +3,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
+import { studentKey } from "@/lib/students";
+import {
+  SkillBreakdownRow,
+  type BreakdownQuestion,
+  type BreakdownStudent,
+} from "@/components/SkillBreakdownRow";
 
 export default async function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,7 +21,15 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
     include: {
       questions: {
         where: { parentId: null },
-        select: { id: true, order: true, skillTag: true, textFr: true },
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          order: true,
+          skillTag: true,
+          textFr: true,
+          textEn: true,
+          options: { select: { letter: true, textFr: true, textEn: true, isCorrect: true } },
+        },
       },
       submissions: { orderBy: { submittedAt: "desc" }, include: { answers: true } },
     },
@@ -24,19 +38,47 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
   if (session.user.role !== "SUPER_ADMIN" && quiz.teacherId !== session.user.id) notFound();
 
   const total = quiz.questions.length;
+  const loc = (fr: string, en: string | null) => (lang === "en" && en ? en : fr);
 
-  // Per-skill stats (used for per-question performance section)
-  const skillStats = new Map<string, { correct: number; total: number }>();
-  for (const sub of quiz.submissions) {
-    for (const ans of sub.answers) {
-      const q = quiz.questions.find((qq) => qq.id === ans.questionId);
-      if (!q || !q.skillTag) continue;
-      const st = skillStats.get(q.skillTag) ?? { correct: 0, total: 0 };
-      st.total++;
-      if (ans.isCorrect) st.correct++;
-      skillStats.set(q.skillTag, st);
+  // Per-skill stats, in question order. Each skill lists its questions and,
+  // for the click-to-expand breakdown, every student who answered them.
+  const skillStats = new Map<
+    string,
+    { correct: number; total: number; questions: BreakdownQuestion[]; students: BreakdownStudent[] }
+  >();
+  quiz.questions.forEach((q, idx) => {
+    if (!q.skillTag) return;
+    const st = skillStats.get(q.skillTag) ?? { correct: 0, total: 0, questions: [], students: [] };
+    st.questions.push({
+      id: q.id,
+      number: idx + 1,
+      text: loc(q.textFr, q.textEn),
+      options: Object.fromEntries(q.options.map((o) => [o.letter, loc(o.textFr, o.textEn)])),
+      correctLetter: q.options.find((o) => o.isCorrect)?.letter ?? null,
+    });
+    skillStats.set(q.skillTag, st);
+  });
+  for (const st of skillStats.values()) {
+    const ids = new Set(st.questions.map((q) => q.id));
+    for (const sub of quiz.submissions) {
+      const relevant = sub.answers.filter((a) => ids.has(a.questionId));
+      if (relevant.length === 0) continue;
+      st.total += relevant.length;
+      st.correct += relevant.filter((a) => a.isCorrect).length;
+      st.students.push({
+        submissionId: sub.id,
+        studentKey: studentKey(sub.studentName, sub.studentClass),
+        name: sub.studentName,
+        cls: sub.studentClass,
+        score: sub.score,
+        total: sub.total,
+        answers: Object.fromEntries(
+          relevant.map((a) => [a.questionId, { chosenLetter: a.chosenLetter, isCorrect: a.isCorrect }])
+        ),
+      });
     }
   }
+  for (const [skill, st] of skillStats) if (st.total === 0) skillStats.delete(skill);
 
   // KPI: average score
   const submissionCount = quiz.submissions.length;
@@ -417,7 +459,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           >
             <span>{t("results.perSkillPerformance", lang)}</span>
             <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-              {t("results.perSkillHint", lang)}
+              {t("results.perSkillHint", lang)} · {t("results.breakdownHint", lang)}
             </span>
           </div>
 
@@ -425,7 +467,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 50px 80px",
+              gridTemplateColumns: "1fr 64px 80px",
               gap: 12,
               padding: "6px 0 10px",
               borderBottom: "1px solid var(--border)",
@@ -441,66 +483,25 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
             <span style={{ textAlign: "right" }}>{t("results.rateCol", lang)}</span>
           </div>
 
-          {[...skillStats.entries()].map(([skill, st], idx, arr) => {
-            const pct = Math.round((st.correct / Math.max(1, st.total)) * 100);
-            const tier = pct >= 70 ? "good" : pct >= 50 ? "mid" : "bad";
-            const barColor =
-              tier === "good"
-                ? "var(--success)"
-                : tier === "mid"
-                ? "var(--accent)"
-                : "var(--danger)";
-            const textColor = tier === "bad" ? "#fca5a5" : "#fff";
-            return (
-              <div
-                key={skill}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 50px 80px",
-                  gap: 12,
-                  alignItems: "center",
-                  padding: "10px 0",
-                  borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : undefined,
-                  fontSize: 13,
-                }}
-              >
-                {/* Skill name + bar */}
-                <div>
-                  <div style={{ marginBottom: 6, fontWeight: 500 }}>{skill}</div>
-                  <div
-                    style={{
-                      height: 6,
-                      background: "rgba(255,255,255,0.06)",
-                      borderRadius: 999,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "block",
-                        height: "100%",
-                        borderRadius: 999,
-                        width: `${pct}%`,
-                        background: barColor,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div
-                  className="numeric muted"
-                  style={{ textAlign: "right" }}
-                >
-                  {st.correct}/{st.total}
-                </div>
-                <div
-                  className="numeric"
-                  style={{ textAlign: "right", fontWeight: 600, color: textColor }}
-                >
-                  {pct}%
-                </div>
-              </div>
-            );
-          })}
+          {[...skillStats.entries()].map(([skill, st], idx, arr) => (
+            <SkillBreakdownRow
+              key={skill}
+              skill={skill}
+              correct={st.correct}
+              total={st.total}
+              questions={st.questions}
+              students={st.students}
+              isLast={idx === arr.length - 1}
+              labels={{
+                correctAnswer: t("results.breakdown.correctAnswer", lang),
+                noAnswer: t("results.breakdown.noAnswer", lang),
+                overall: t("results.breakdown.overall", lang),
+                correct: t("results.breakdown.correct", lang),
+                chose: t("results.breakdown.chose", lang),
+                hint: t("results.breakdownHint", lang),
+              }}
+            />
+          ))}
         </div>
       )}
 

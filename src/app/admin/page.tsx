@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { QuizTableRow } from "@/components/QuizTableRow";
+import { RefreshOnMount } from "@/components/RefreshOnMount";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 
@@ -20,7 +21,7 @@ export default async function AdminDashboard() {
       subject: true,
       grade: true,
       teacher: { select: { name: true } },
-      _count: { select: { questions: true, submissions: true } },
+      _count: { select: { questions: { where: { parentId: null } }, submissions: true } },
     },
   });
 
@@ -29,6 +30,7 @@ export default async function AdminDashboard() {
 
   return (
     <>
+      <RefreshOnMount />
       <div className="section-head" style={{ marginBottom: 36 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 14 }}>
@@ -36,7 +38,13 @@ export default async function AdminDashboard() {
               ? t("adminDash.superAdminView", lang)
               : t("adminDash.welcome", lang)}
           </div>
-          <h1 className="display" style={{ fontSize: "clamp(40px, 4.5vw, 64px)" }}>
+          <h1
+            className="display"
+            style={{
+              // "interactive worksheets" is long, so the EN title runs smaller.
+              fontSize: lang === "fr" ? "clamp(40px, 4.5vw, 64px)" : "clamp(32px, 3.6vw, 50px)",
+            }}
+          >
             {lang === "fr" ? (
               isSuperAdmin ? (
                 <>
@@ -49,11 +57,11 @@ export default async function AdminDashboard() {
               )
             ) : isSuperAdmin ? (
               <>
-                All <span className="accent">quizzes</span>
+                All <span className="accent">interactive worksheets</span>
               </>
             ) : (
               <>
-                Your <span className="accent">quizzes</span>
+                Your <span className="accent">interactive worksheets</span>
               </>
             )}
           </h1>

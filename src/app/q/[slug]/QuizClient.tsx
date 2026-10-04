@@ -64,7 +64,7 @@ export default function QuizClient({ slug, lang }: { slug: string; lang: Lang })
     fetch(`/api/public/quiz/${slug}?lang=${lang}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("not found"))))
       .then((data: PublicQuiz) => { if (!cancelled) setQuiz(data); })
-      .catch(() => { if (!cancelled) setError("Quiz introuvable."); })
+      .catch(() => { if (!cancelled) setError("Fiche interactive introuvable."); })
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [slug, lang]);
@@ -189,7 +189,7 @@ export default function QuizClient({ slug, lang }: { slug: string; lang: Lang })
     return (
       <div className="empty-state">
         <div className="empty-state__icon">📄</div>
-        <div className="h3" style={{ color: "#fff" }}>{error ?? "Quiz introuvable."}</div>
+        <div className="h3" style={{ color: "#fff" }}>{error ?? "Fiche interactive introuvable."}</div>
       </div>
     );
 

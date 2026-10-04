@@ -31,7 +31,7 @@ export default async function GradePage({ params }: { params: Params }) {
       ...(isStaff ? {} : { isPublished: true }),
     },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { questions: true } } },
+    include: { _count: { select: { questions: { where: { parentId: null } } } } },
   });
 
   const name = (x: { nameFr: string; nameEn: string }) =>

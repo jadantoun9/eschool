@@ -30,7 +30,7 @@ export async function GET(
   if (!quiz || !quiz.isPublished) {
     const session = await auth();
     if (!quiz || !session?.user) {
-      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+      return NextResponse.json({ error: "Interactive worksheet not found" }, { status: 404 });
     }
   }
 

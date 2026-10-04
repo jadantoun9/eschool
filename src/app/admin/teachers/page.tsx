@@ -14,7 +14,7 @@ export default async function TeachersPage() {
 
   const teachers = await prisma.teacher.findMany({
     orderBy: { createdAt: "desc" },
-    select: { id: true, email: true, name: true, role: true, passwordHash: true, inviteToken: true, createdAt: true },
+    select: { id: true, email: true, name: true, role: true, passwordHash: true, inviteToken: true, createdAt: true, _count: { select: { quizzes: true } } },
   });
 
   return (
@@ -30,6 +30,7 @@ export default async function TeachersPage() {
           role: teacher.role,
           status: teacher.passwordHash ? "active" : "pending",
           inviteToken: teacher.inviteToken,
+          worksheetCount: teacher._count.quizzes,
           createdAt: teacher.createdAt.toISOString(),
         }))}
       />

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   });
 
   if (!quiz || !quiz.isPublished) {
-    return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    return NextResponse.json({ error: "Interactive worksheet not found" }, { status: 404 });
   }
 
   const { score, total, corrections } = grade({

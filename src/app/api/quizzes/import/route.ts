@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const parsed = quizImportSchema.safeParse(json);
   if (!parsed.success)
     return NextResponse.json(
-      { error: "Invalid quiz JSON", details: parsed.error.flatten() },
+      { error: "Invalid interactive worksheet JSON", details: parsed.error.flatten() },
       { status: 400 }
     );
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Unknown gradeSlug: ${data.gradeSlug}` }, { status: 400 });
   if (existing)
     return NextResponse.json(
-      { error: `A quiz with slug "${data.slug}" already exists. Change the slug in the JSON.` },
+      { error: `An interactive worksheet with slug "${data.slug}" already exists. Change the slug in the JSON.` },
       { status: 409 }
     );
 
