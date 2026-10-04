@@ -57,13 +57,13 @@ export default function ChooseMethod({
       bullets:
         lang === "fr"
           ? [
-              "Idéal pour 8 à 12 questions d'un coup",
-              "L'IA pose les questions, tu réponds simplement",
+              "Jusqu'à 20 questions d'un coup",
+              "Questions, explications et suivis en français et en anglais",
               "Tu relis et modifies tout avant publication",
             ]
           : [
-              "Best for 8–12 questions in one go",
-              "The AI asks the questions, you answer in plain words",
+              "Up to 20 questions in one go",
+              "Questions, explanations and follow-ups in French and English",
               "You review & edit everything before publishing",
             ],
     },

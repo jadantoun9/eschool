@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { quizImportSchema, type QuizImport } from "@/lib/quiz-import-schema";
 import { newSlug } from "@/lib/slug";
 
-// Automatic worksheet generation: Claude first, ChatGPT as fallback. Both are
+// Automatic worksheet generation: ChatGPT first, Claude as fallback. Both are
 // asked for the same JSON (enforced by each provider's structured outputs),
 // which is then assembled into a QuizImport and validated with the same schema
 // the manual JSON import uses — so the result drops straight into the import
@@ -21,9 +21,26 @@ export type GenerateInput = {
   prelimUrl?: string;
 };
 
+export type Provider = "claude" | "openai";
+
+// Streamed while generating. Questions are counted as they appear in the
+// partial JSON ("skillTag" is the first field of every main question), so the
+// UI can show "question N of M" and estimate the time left.
+export type GenerateProgress = {
+  provider: Provider;
+  model: string;
+  phase: "thinking" | "writing";
+  questionsStarted: number;
+};
+type OnProgress = (p: Omit<GenerateProgress, "provider" | "model">) => void;
+
+function countQuestions(partialJson: string): number {
+  return partialJson.split('"skillTag"').length - 1;
+}
+
 export type GenerateResult = {
   data: QuizImport;
-  provider: "claude" | "openai";
+  provider: Provider;
   model: string;
   /** Why earlier providers were skipped, if any (for logs / UI). */
   failures: string[];
@@ -169,7 +186,7 @@ function userPrompt(input: GenerateInput): string {
 // ---------------------------------------------------------------------------
 // Providers. Each returns the parsed JSON or throws with a short reason.
 
-async function generateWithClaude(input: GenerateInput): Promise<unknown> {
+async function generateWithClaude(input: GenerateInput, onProgress: OnProgress): Promise<unknown> {
   const client = new Anthropic();
   // Streaming: a full worksheet is a long answer, and streaming avoids HTTP
   // timeouts on large max_tokens. finalMessage() collects the whole reply.
@@ -183,6 +200,15 @@ async function generateWithClaude(input: GenerateInput): Promise<unknown> {
     },
     messages: [{ role: "user", content: userPrompt(input) }],
   });
+  // Before any text arrives Claude is thinking; then the JSON streams in.
+  let last = -1;
+  stream.on("text", (_delta, snapshot) => {
+    const n = countQuestions(snapshot);
+    if (n !== last) {
+      last = n;
+      onProgress({ phase: "writing", questionsStarted: n });
+    }
+  });
   const message = await stream.finalMessage();
   if (message.stop_reason === "refusal") throw new Error("Claude declined the request");
   if (message.stop_reason === "max_tokens") throw new Error("Claude's answer was cut off (max_tokens)");
@@ -193,10 +219,11 @@ async function generateWithClaude(input: GenerateInput): Promise<unknown> {
   return JSON.parse(text);
 }
 
-async function generateWithOpenAI(input: GenerateInput): Promise<unknown> {
+async function generateWithOpenAI(input: GenerateInput, onProgress: OnProgress): Promise<unknown> {
   const client = new OpenAI();
-  const res = await client.chat.completions.create({
+  const stream = await client.chat.completions.create({
     model: OPENAI_MODEL,
+    stream: true,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userPrompt(input) },
@@ -206,11 +233,28 @@ async function generateWithOpenAI(input: GenerateInput): Promise<unknown> {
       json_schema: { name: "worksheet", schema: WORKSHEET_SCHEMA, strict: true },
     },
   });
-  const choice = res.choices[0];
-  if (!choice) throw new Error("ChatGPT returned no answer");
-  if (choice.message.refusal) throw new Error(`ChatGPT declined the request: ${choice.message.refusal}`);
-  if (choice.finish_reason === "length") throw new Error("ChatGPT's answer was cut off (length)");
-  return JSON.parse(choice.message.content ?? "");
+  let text = "";
+  let refusal = "";
+  let finishReason: string | null = null;
+  let last = -1;
+  for await (const chunk of stream) {
+    const choice = chunk.choices[0];
+    if (!choice) continue;
+    if (choice.delta?.content) {
+      text += choice.delta.content;
+      const n = countQuestions(text);
+      if (n !== last) {
+        last = n;
+        onProgress({ phase: "writing", questionsStarted: n });
+      }
+    }
+    if (choice.delta?.refusal) refusal += choice.delta.refusal;
+    if (choice.finish_reason) finishReason = choice.finish_reason;
+  }
+  if (refusal) throw new Error(`ChatGPT declined the request: ${refusal}`);
+  if (finishReason === "length") throw new Error("ChatGPT's answer was cut off (length)");
+  if (!text) throw new Error("ChatGPT returned no answer");
+  return JSON.parse(text);
 }
 
 // ---------------------------------------------------------------------------
@@ -283,15 +327,19 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export async function generateWorksheet(input: GenerateInput): Promise<GenerateResult> {
+export async function generateWorksheet(
+  input: GenerateInput,
+  onProgress: (p: GenerateProgress) => void = () => {}
+): Promise<GenerateResult> {
   const providers = [
-    { id: "claude" as const, model: CLAUDE_MODEL, run: generateWithClaude },
     { id: "openai" as const, model: OPENAI_MODEL, run: generateWithOpenAI },
+    { id: "claude" as const, model: CLAUDE_MODEL, run: generateWithClaude },
   ];
   const failures: string[] = [];
   for (const p of providers) {
     try {
-      const raw = await p.run(input);
+      onProgress({ provider: p.id, model: p.model, phase: "thinking", questionsStarted: 0 });
+      const raw = await p.run(input, (pr) => onProgress({ provider: p.id, model: p.model, ...pr }));
       const data = assemble(raw, input);
       return { data, provider: p.id, model: p.model, failures };
     } catch (err) {

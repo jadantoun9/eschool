@@ -40,6 +40,16 @@ export default async function NewQuizPage({
     return `/admin/quizzes/new?${params.toString()}`;
   })();
 
+  // The AI option now generates automatically. The manual JSON import flow
+  // (/admin/quizzes/import) is kept and still reachable from the dashboard.
+  const generateHref = (() => {
+    const params = new URLSearchParams();
+    if (sp.subject) params.set("subject", sp.subject);
+    if (sp.grade) params.set("grade", sp.grade);
+    const qs = params.toString();
+    return `/admin/quizzes/generate${qs ? `?${qs}` : ""}`;
+  })();
+
   if (step === "choose") {
     return (
       <div className="container container--narrow">
@@ -71,7 +81,7 @@ export default async function NewQuizPage({
         <ChooseMethod
           lang={lang}
           manualHref={manualHref}
-          importHref="/admin/quizzes/import"
+          importHref={generateHref}
         />
       </div>
     );
