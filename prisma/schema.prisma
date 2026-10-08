@@ -103,6 +103,13 @@ model Question {
   diagramSvg    String?
   explanationFr String
   explanationEn String?
+
+  // Optional external resource shown with the question (video, GeoGebra or
+  // other interactive activity). The label falls back to a generic one.
+  linkUrl       String?
+  linkLabelFr   String?
+  linkLabelEn   String?
+
   options       Option[]
   remediation   Remediation?
 

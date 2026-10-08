@@ -91,6 +91,9 @@ export async function POST(req: Request) {
         hintFr: q.hintFr ?? null,
         hintEn: q.hintEn ?? null,
         diagramSvg: q.diagramSvg ?? null,
+        linkUrl: q.link?.url ?? null,
+        linkLabelFr: q.link?.labelFr || null,
+        linkLabelEn: q.link?.labelEn || null,
         explanationFr: q.remediation.explanationFr.replace(/<[^>]+>/g, ""),
         explanationEn: q.remediation.explanationEn.replace(/<[^>]+>/g, ""),
       });
@@ -136,7 +139,7 @@ export async function POST(req: Request) {
           subjectId: subject.id,
           gradeId: grade.id,
           teacherId: session.user!.id,
-          isPublished: false,
+          isPublished: true,
           prelimBadgeFr: data.prelim?.badgeFr ?? null,
           prelimBadgeEn: data.prelim?.badgeEn ?? null,
           prelimTitleFr: data.prelim?.titleFr ?? null,

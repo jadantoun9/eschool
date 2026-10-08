@@ -43,6 +43,7 @@ export async function GET(
     order: q.order,
     text: t(q.textFr, q.textEn),
     hint: q.hintFr ? t(q.hintFr, q.hintEn) : null,
+    link: q.linkUrl ? { url: q.linkUrl, label: t(q.linkLabelFr, q.linkLabelEn) || null } : null,
     hasRemediation: !!q.remediation,
     options: q.options.map((o) => ({
       id: o.id,

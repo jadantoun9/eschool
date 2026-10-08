@@ -37,6 +37,9 @@ const QuestionInput = z.object({
   textEn: z.string().trim().optional().nullable(),
   hintFr: z.string().trim().optional().nullable(),
   hintEn: z.string().trim().optional().nullable(),
+  linkUrl: z.string().trim().url().optional().nullable().or(z.literal("")),
+  linkLabelFr: z.string().trim().optional().nullable(),
+  linkLabelEn: z.string().trim().optional().nullable(),
   explanationFr: z.string().trim().default(""),
   explanationEn: z.string().trim().optional().nullable(),
   options: z
@@ -128,6 +131,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       textEn: q.textEn || null,
       hintFr: q.hintFr || null,
       hintEn: q.hintEn || null,
+      linkUrl: q.linkUrl || null,
+      linkLabelFr: q.linkLabelFr || null,
+      linkLabelEn: q.linkLabelEn || null,
       explanationFr: q.explanationFr ?? "",
       explanationEn: q.explanationEn || null,
     });

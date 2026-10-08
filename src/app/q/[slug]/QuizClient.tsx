@@ -12,6 +12,7 @@ type PublicQuestion = {
   order: number;
   text: string;
   hint: string | null;
+  link: { url: string; label: string | null } | null;
   options: { id: string; letter: string; text: string }[];
   hasRemediation: boolean;
 };
@@ -300,6 +301,7 @@ export default function QuizClient({ slug, lang }: { slug: string; lang: Lang })
                   <span dangerouslySetInnerHTML={{ __html: q.hint }} />
                 </div>
               )}
+              {q.link && <QuestionLink link={q.link} lang={lang} />}
               <div className="qp__options">
                 {q.options.map((o) => {
                   const selected = answers[q.id] === o.letter;
@@ -408,6 +410,61 @@ function ChevronLeft() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M10 4l-4 4 4 4" />
     </svg>
+  );
+}
+
+// The teacher only gives a URL; the icon and fallback label come from the host.
+function linkKind(url: string): "video" | "activity" | "link" {
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "link";
+  }
+  if (/(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/.test(host)) return "video";
+  if (/(^|\.)(geogebra\.org|desmos\.com|phet\.colorado\.edu)$/.test(host)) return "activity";
+  return "link";
+}
+
+function QuestionLink({ link, lang }: { link: { url: string; label: string | null }; lang: Lang }) {
+  const kind = linkKind(link.url);
+  const kindLabel =
+    kind === "video"
+      ? t("student.resourceVideo", lang)
+      : kind === "activity"
+      ? t("student.resourceActivity", lang)
+      : t("student.resourceLink", lang);
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "flex",
+        gap: 14,
+        padding: "12px 14px",
+        marginTop: -12,
+        marginBottom: 22,
+        background: "rgba(255,204,0,0.06)",
+        border: "1px solid var(--border-accent)",
+        borderRadius: "var(--radius)",
+        alignItems: "center",
+      }}
+    >
+      <span className="icon-chip icon-chip--accent" style={{ flexShrink: 0 }} aria-hidden>
+        {kind === "video" ? "▶" : kind === "activity" ? "🔬" : "🔗"}
+      </span>
+      <span style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
+        <span className="quiz-part-label">{kindLabel}</span>
+        <span style={{ fontWeight: 600, fontSize: 14, color: "#fff", overflowWrap: "anywhere" }}>
+          {link.label ?? link.url}
+        </span>
+      </span>
+      <span className="accent-text" style={{ fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+        {t("student.openResource", lang)}
+      </span>
+      <style>{`.quiz-part-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }`}</style>
+    </a>
   );
 }
 

@@ -16,6 +16,15 @@ function loc(isEn: boolean, fr: string, en?: string | null) {
 
 type ChoiceOption = { textFr: string; textEn: string };
 
+// Links added in the manual editor but left without a URL are dropped rather
+// than failing validation.
+function withoutEmptyLinks(data: QuizImport): QuizImport {
+  const next = structuredClone(data) as QuizImport;
+  for (const p of next.parts)
+    for (const q of p.questions) if (q.link && !q.link.url.trim()) q.link = null;
+  return next;
+}
+
 /* ── Inline-edit field primitives (used by the "Edit content" view) ── */
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -264,7 +273,7 @@ export default function ImportClient({
   }
 
   function openJson() {
-    setJsonDraft(JSON.stringify(data, null, 2));
+    setJsonDraft(JSON.stringify(data && withoutEmptyLinks(data), null, 2));
     setJsonErr(null);
     setView("json");
   }
@@ -351,12 +360,25 @@ export default function ImportClient({
 
   async function submit() {
     if (!data) return;
-    setBusy(true);
     setErr(null);
+
+    // Re-validate so a bad URL typed in the manual editor is reported here,
+    // by field.
+    const parsed = quizImportSchema.safeParse(withoutEmptyLinks(data));
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .slice(0, 8)
+        .map((i) => `• ${i.path.join(".") || "(root)"}: ${i.message}`)
+        .join("\n");
+      setErr(t("import.fixBeforeCreate", lang) + issues);
+      return;
+    }
+
+    setBusy(true);
     const res = await fetch("/api/quizzes/import", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(parsed.data),
     });
     setBusy(false);
     if (!res.ok) {
@@ -784,6 +806,55 @@ export default function ImportClient({
                     onText={(oi, w, v) => mutate((d) => { const o = d.parts[pIdx].questions[qIdx].options[oi]; if (w === "fr") o.textFr = v; else o.textEn = v; })}
                     onCorrect={(oi) => mutate((d) => { d.parts[pIdx].questions[qIdx].correctIndex = oi; })}
                   />
+
+                  <div>
+                    <FieldLabel>{t("import.linkLabel", lang)}</FieldLabel>
+                    {q.link ? (
+                      <div className="col" style={{ gap: 6 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <div style={{ flex: 1 }}>
+                            <LangInput
+                              value={q.link.url}
+                              placeholder="https://www.geogebra.org/m/… · https://youtube.com/…"
+                              onChange={(v) => mutate((d) => { d.parts[pIdx].questions[qIdx].link!.url = v.trim(); })}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="icon-btn icon-btn--danger"
+                            title={t("import.removeLinkBtn", lang)}
+                            onClick={() => mutate((d) => { d.parts[pIdx].questions[qIdx].link = null; })}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <LangInput
+                          tag="FR"
+                          value={q.link.labelFr ?? ""}
+                          placeholder={t("import.linkTitlePlaceholder", lang)}
+                          onChange={(v) => mutate((d) => { d.parts[pIdx].questions[qIdx].link!.labelFr = v; })}
+                        />
+                        <LangInput
+                          tag="EN"
+                          value={q.link.labelEn ?? ""}
+                          placeholder={t("import.linkTitlePlaceholder", lang)}
+                          onChange={(v) => mutate((d) => { d.parts[pIdx].questions[qIdx].link!.labelEn = v; })}
+                        />
+                      </div>
+                    ) : (
+                      <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--sm"
+                          onClick={() => mutate((d) => { d.parts[pIdx].questions[qIdx].link = { url: "", labelFr: "", labelEn: "" }; })}
+                        >
+                          {t("import.addLinkBtn", lang)}
+                        </button>
+                        <span className="dim" style={{ fontSize: 12 }}>{t("import.linkHint", lang)}</span>
+                      </div>
+                    )}
+                  </div>
+
                   <TwoLang
                     label={t("import.explanationLabel", lang)}
                     fr={q.remediation.explanationFr}
@@ -854,8 +925,8 @@ export default function ImportClient({
               <span className="badge badge--grade">
                 {t("import.gradeLabel", lang)}: {data!.gradeSlug}
               </span>
-              <span className="badge badge--draft">
-                {t("import.draftBadge", lang)}
+              <span className="badge badge--published">
+                {t("import.publishBadge", lang)}
               </span>
             </div>
             <div className="h2" style={{ marginBottom: 4 }}>{loc(isEn, data!.titleFr, data!.titleEn)}</div>
@@ -974,6 +1045,34 @@ export default function ImportClient({
                     );
                   })}
                 </div>
+                {q.link?.url && (
+                  <div style={{ marginTop: 14 }}>
+                    <div className="muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+                      {t("import.linkLabel", lang)}
+                    </div>
+                    <div className="row" style={{ gap: 8, fontSize: 12.5 }}>
+                      <span
+                        className="muted"
+                        title={q.link.url}
+                        style={{
+                          flex: 1,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          padding: "6px 10px",
+                          background: "rgba(0,0,0,0.2)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 8,
+                        }}
+                      >
+                        {loc(isEn, q.link.labelFr ?? "", q.link.labelEn) || q.link.url}
+                      </span>
+                      <a href={q.link.url} target="_blank" rel="noreferrer" className="btn btn--ghost btn--sm">
+                        {t("import.openLinkBtn", lang)} ↗
+                      </a>
+                    </div>
+                  </div>
+                )}
                 {q.remediation.videos.length > 0 && (
                   <div style={{ marginTop: 14 }}>
                     <div className="muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>

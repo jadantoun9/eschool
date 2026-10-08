@@ -34,6 +34,9 @@ type Question = {
   textEn?: string | null;
   hintFr?: string | null;
   hintEn?: string | null;
+  linkUrl?: string | null;
+  linkLabelFr?: string | null;
+  linkLabelEn?: string | null;
   explanationFr: string;
   explanationEn?: string | null;
   options: Option[];
@@ -71,6 +74,9 @@ type QuizDto = {
     textEn: string | null;
     hintFr: string | null;
     hintEn: string | null;
+    linkUrl: string | null;
+    linkLabelFr: string | null;
+    linkLabelEn: string | null;
     explanationFr: string;
     explanationEn: string | null;
     options: Option[];
@@ -197,6 +203,9 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
           textEn: q.textEn,
           hintFr: q.hintFr,
           hintEn: q.hintEn,
+          linkUrl: q.linkUrl,
+          linkLabelFr: q.linkLabelFr,
+          linkLabelEn: q.linkLabelEn,
           explanationFr: q.explanationFr,
           explanationEn: q.explanationEn,
           options: q.options,
@@ -357,6 +366,9 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
           textEn: q.textEn || null,
           hintFr: q.hintFr || null,
           hintEn: q.hintEn || null,
+          linkUrl: q.linkUrl?.trim() || null,
+          linkLabelFr: q.linkLabelFr || null,
+          linkLabelEn: q.linkLabelEn || null,
           explanationFr: q.explanationFr,
           explanationEn: q.explanationEn || null,
           options: q.options,
@@ -871,6 +883,37 @@ function QuestionBody({
             placeholder="ex: congruence_def"
           />
         </div>
+      </div>
+
+      <div className="field">
+        <label className="field__label">{s["edit.link.url"]}</label>
+        <input
+          className="input"
+          type="url"
+          value={q.linkUrl ?? ""}
+          onChange={(e) => updateQ(i, { linkUrl: e.target.value })}
+          placeholder="https://www.geogebra.org/m/…"
+        />
+        {q.linkUrl?.trim() && (
+          <div className="grid grid--2" style={{ marginTop: 8 }}>
+            <div>
+              <label className="field__label">{s["edit.link.labelFr"]}</label>
+              <input
+                className="input"
+                value={q.linkLabelFr ?? ""}
+                onChange={(e) => updateQ(i, { linkLabelFr: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="field__label">{s["edit.link.labelEn"]}</label>
+              <input
+                className="input"
+                value={q.linkLabelEn ?? ""}
+                onChange={(e) => updateQ(i, { linkLabelEn: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="field">

@@ -17,6 +17,13 @@ const videoSchema = z.object({
   url: z.string().url(),
 });
 
+// External resource shown with the question (video, GeoGebra activity…).
+const linkSchema = z.object({
+  url: z.string().url(),
+  labelFr: z.string().nullable().optional(),
+  labelEn: z.string().nullable().optional(),
+});
+
 const remediationSchema = z.object({
   explanationFr: z.string().min(1),
   explanationEn: z.string().min(1),
@@ -31,6 +38,7 @@ const questionSchema = z.object({
   hintFr: z.string().nullable().optional(),
   hintEn: z.string().nullable().optional(),
   diagramSvg: z.string().nullable().optional(),
+  link: linkSchema.nullable().optional(),
   correctIndex: z.number().int().min(0).max(3),
   options: z.array(optionSchema).length(4),
   remediation: remediationSchema,
