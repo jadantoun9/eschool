@@ -315,11 +315,15 @@ export default function ImportClient({
     if (!data) return null;
     let questions = 0;
     let videos = 0;
+    let links = 0;
     for (const p of data.parts) {
       questions += p.questions.length;
-      for (const q of p.questions) videos += q.remediation.videos.length;
+      for (const q of p.questions) {
+        videos += q.remediation.videos.length;
+        if (q.link?.url) links++;
+      }
     }
-    return { parts: data.parts.length, questions, videos };
+    return { parts: data.parts.length, questions, videos, links };
   }, [data]);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -630,8 +634,8 @@ export default function ImportClient({
           <span style={{ fontWeight: 700 }}>✓</span>
           <span>
             {lang === "fr"
-              ? `JSON valide · ${counts.parts} partie(s) · ${counts.questions} questions · ${counts.videos} vidéos`
-              : `JSON parsed successfully · ${counts.parts} part(s) · ${counts.questions} questions · ${counts.videos} videos`}
+              ? `JSON valide · ${counts.parts} partie(s) · ${counts.questions} questions · ${counts.links} liens vidéo/activité · ${counts.videos} vidéos d'aide`
+              : `JSON parsed successfully · ${counts.parts} part(s) · ${counts.questions} questions · ${counts.links} video/activity links · ${counts.videos} help videos`}
           </span>
         </div>
       )}
@@ -942,6 +946,10 @@ export default function ImportClient({
               <div className="stat">
                 <div className="stat__num numeric">{counts.questions}</div>
                 <div className="stat__label">{t("import.statQuestions", lang)}</div>
+              </div>
+              <div className="stat">
+                <div className="stat__num numeric">{counts.links}</div>
+                <div className="stat__label">{t("import.statLinks", lang)}</div>
               </div>
               <div className="stat">
                 <div className="stat__num numeric">{counts.videos}</div>

@@ -183,9 +183,11 @@ export async function findQuestionLinks(
   const search = { user: userPrompt(data, subject, grade), maxSearches: Math.min(60, positions.length * 3) };
   const failures: string[] = [];
   let answer: z.infer<typeof answerSchema> | null = null;
+  let provider = "";
   for (const p of PROVIDERS) {
     try {
       answer = answerSchema.parse(await p.run(search));
+      provider = p.name;
       break;
     } catch (err) {
       const reason = `${p.name} (${p.model}): ${err instanceof z.ZodError || err instanceof SyntaxError ? "returned invalid JSON" : describeError(err)}`;
@@ -200,9 +202,11 @@ export async function findQuestionLinks(
   const seen = new Set<number>();
   const links: QuestionLink[] = [];
   candidates.forEach((l, i) => {
+    if (!checks[i]) console.warn("[ai-links] dropped, does not open:", l.url);
     if (!checks[i] || seen.has(l.q)) return;
     seen.add(l.q);
     links.push({ ...positions[l.q - 1], url: l.url, labelFr: l.labelFr.trim(), labelEn: l.labelEn.trim() });
   });
+  console.info(`[ai-links] ${provider}: ${answer.links.length} proposed, ${links.length} kept, ${positions.length} questions`);
   return links;
 }
