@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { CHALLENGE_MIN_PCT } from "@/types/quiz";
 
 function norm(s: string | null | undefined): string {
   return (s ?? "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase();
@@ -27,6 +28,7 @@ export const answerWithQuestion = {
   question: {
     select: {
       parentId: true,
+      isChallenge: true,
       remediation: { select: { id: true } },
       _count: { select: { followUps: true } },
     },
@@ -42,6 +44,7 @@ export function followUpStats(answers: StatsAnswer[]): { correct: number; answer
   let answered = 0;
   let total = 0;
   for (const a of answers) {
+    if (a.question.isChallenge) continue;
     if (a.question.parentId) {
       answered++;
       if (a.isCorrect) correct++;
@@ -55,6 +58,21 @@ export function followUpStats(answers: StatsAnswer[]): { correct: number; answer
 // "2/5", or "—" when no follow-up was offered or none was answered.
 export function followUpLabel(s: { correct: number; answered: number; total: number }): string {
   return s.total > 0 && s.answered > 0 ? `${s.correct}/${s.total}` : "—";
+}
+
+export function challengeOffered(score: number, total: number): boolean {
+  return total > 0 && scorePct(score, total) >= CHALLENGE_MIN_PCT;
+}
+
+// Challenge score: correct / challengeCount, for students who were offered
+// the quiz's challenge questions (null when they weren't).
+export function challengeStats(
+  sub: { score: number; total: number; answers: StatsAnswer[] },
+  challengeCount: number
+): { correct: number; answered: number; total: number } | null {
+  if (challengeCount === 0 || !challengeOffered(sub.score, sub.total)) return null;
+  const answers = sub.answers.filter((a) => a.question.isChallenge);
+  return { correct: answers.filter((a) => a.isCorrect).length, answered: answers.length, total: challengeCount };
 }
 
 export function scoreColor(pct: number): string {

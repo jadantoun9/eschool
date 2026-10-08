@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
-import { quizImportSchema, type QuizImport } from "@/lib/quiz-import-schema";
+import { z } from "zod";
+import { challengeSchema as challengeImportSchema, quizImportSchema, type ChallengeImport, type QuizImport } from "@/lib/quiz-import-schema";
 import { newSlug } from "@/lib/slug";
 
 // Automatic worksheet generation: ChatGPT first, Claude as fallback. Both are
@@ -110,6 +111,30 @@ const questionSchema = {
   additionalProperties: false,
 };
 
+const challengeSchema = {
+  type: "object",
+  properties: {
+    textFr: { type: "string" },
+    textEn: { type: "string" },
+    hintFr: nullableString,
+    hintEn: nullableString,
+    diagramSvg: nullableString,
+    correctIndex,
+    options: { type: "array", items: optionSchema },
+    explanationFr: { type: "string" },
+    explanationEn: { type: "string" },
+  },
+  required: ["textFr", "textEn", "hintFr", "hintEn", "diagramSvg", "correctIndex", "options", "explanationFr", "explanationEn"],
+  additionalProperties: false,
+};
+
+const CHALLENGES_SCHEMA = {
+  type: "object",
+  properties: { challenges: { type: "array", items: challengeSchema } },
+  required: ["challenges"],
+  additionalProperties: false,
+};
+
 const WORKSHEET_SCHEMA = {
   type: "object",
   properties: {
@@ -130,13 +155,24 @@ const WORKSHEET_SCHEMA = {
         additionalProperties: false,
       },
     },
+    challenges: { type: "array", items: challengeSchema },
   },
-  required: ["titleFr", "titleEn", "parts"],
+  required: ["titleFr", "titleEn", "parts", "challenges"],
   additionalProperties: false,
 };
 
 // ---------------------------------------------------------------------------
 // Prompt (adapted from public/quiz-template.md, minus the chat-specific steps).
+
+export const CHALLENGE_COUNT = 3;
+
+const CHALLENGE_RULES = `## Challenge questions ("go further")
+Write exactly ${CHALLENGE_COUNT} challenge questions. They are offered only to students who score 85% or more on the worksheet, after it is submitted, to take them beyond what is expected at their grade.
+- Each one is clearly harder than every main question: multi-step reasoning, combining two or more skills of the worksheet, an unfamiliar context, a "why does this always work" or generalisation angle, or a first step into the ideas of the next chapter.
+- Each stays within reach of a strong student who has mastered this chapter: no techniques from far beyond the grade.
+- Same format as a main question: 4 options, the 3 wrong ones encoding mistakes a strong student could still make; one correct option.
+- explanationFr / explanationEn: 2–4 sentences walking through the reasoning, shown after the student answers.
+- hintFr / hintEn and diagramSvg follow the same rules as for main questions.`;
 
 const SYSTEM_PROMPT = `You are an AI tutor designer for the ICE Learning platform, a bilingual (French + English) adaptive-learning site for middle- and high-school science and mathematics. You write complete interactive worksheets: multiple-choice questions with teaching explanations and follow-up questions. Your output is saved straight into the platform, then reviewed by the teacher.
 
@@ -170,6 +206,8 @@ Questions are substantive, exam-grade items, not one-line trivia.
 - diagramSvg: only when a small diagram genuinely helps — an inline SVG string with viewBox="0 0 240 130", simple shapes, stroke="currentColor", no scripts or external references. null otherwise; most questions need none.
 - subtitleFr / subtitleEn on a part: a short description of the part, or null.
 
+${CHALLENGE_RULES}
+
 Do not include videos or links of any kind; they are added in a separate step.`;
 
 function userPrompt(input: GenerateInput): string {
@@ -186,19 +224,21 @@ function userPrompt(input: GenerateInput): string {
 // ---------------------------------------------------------------------------
 // Providers. Each returns the parsed JSON or throws with a short reason.
 
-async function generateWithClaude(input: GenerateInput, onProgress: OnProgress): Promise<unknown> {
+type Job = { system: string; user: string; schemaName: string; schema: Record<string, unknown> };
+
+async function generateWithClaude(job: Job, onProgress: OnProgress): Promise<unknown> {
   const client = new Anthropic();
   // Streaming: a full worksheet is a long answer, and streaming avoids HTTP
   // timeouts on large max_tokens. finalMessage() collects the whole reply.
   const stream = client.messages.stream({
     model: CLAUDE_MODEL,
     max_tokens: 64000,
-    system: SYSTEM_PROMPT,
+    system: job.system,
     output_config: {
       effort: "medium",
-      format: { type: "json_schema", schema: WORKSHEET_SCHEMA },
+      format: { type: "json_schema", schema: job.schema },
     },
-    messages: [{ role: "user", content: userPrompt(input) }],
+    messages: [{ role: "user", content: job.user }],
   });
   // Before any text arrives Claude is thinking; then the JSON streams in.
   let last = -1;
@@ -219,18 +259,18 @@ async function generateWithClaude(input: GenerateInput, onProgress: OnProgress):
   return JSON.parse(text);
 }
 
-async function generateWithOpenAI(input: GenerateInput, onProgress: OnProgress): Promise<unknown> {
+async function generateWithOpenAI(job: Job, onProgress: OnProgress): Promise<unknown> {
   const client = new OpenAI();
   const stream = await client.chat.completions.create({
     model: OPENAI_MODEL,
     stream: true,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt(input) },
+      { role: "system", content: job.system },
+      { role: "user", content: job.user },
     ],
     response_format: {
       type: "json_schema",
-      json_schema: { name: "worksheet", schema: WORKSHEET_SCHEMA, strict: true },
+      json_schema: { name: job.schemaName, schema: job.schema, strict: true },
     },
   });
   let text = "";
@@ -327,21 +367,24 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export async function generateWorksheet(
-  input: GenerateInput,
-  onProgress: (p: GenerateProgress) => void = () => {}
-): Promise<GenerateResult> {
-  const providers = [
-    { id: "openai" as const, model: OPENAI_MODEL, run: generateWithOpenAI },
-    { id: "claude" as const, model: CLAUDE_MODEL, run: generateWithClaude },
-  ];
+const PROVIDERS = [
+  { id: "openai" as const, model: OPENAI_MODEL, run: generateWithOpenAI },
+  { id: "claude" as const, model: CLAUDE_MODEL, run: generateWithClaude },
+];
+
+// ChatGPT first, Claude if it fails; `finish` validates the raw answer, and a
+// validation failure also moves on to the next provider.
+async function runProviders<T>(
+  job: Job,
+  finish: (raw: unknown) => T,
+  onProgress: (p: GenerateProgress) => void
+): Promise<{ value: T; provider: Provider; model: string; failures: string[] }> {
   const failures: string[] = [];
-  for (const p of providers) {
+  for (const p of PROVIDERS) {
     try {
       onProgress({ provider: p.id, model: p.model, phase: "thinking", questionsStarted: 0 });
-      const raw = await p.run(input, (pr) => onProgress({ provider: p.id, model: p.model, ...pr }));
-      const data = assemble(raw, input);
-      return { data, provider: p.id, model: p.model, failures };
+      const raw = await p.run(job, (pr) => onProgress({ provider: p.id, model: p.model, ...pr }));
+      return { value: finish(raw), provider: p.id, model: p.model, failures };
     } catch (err) {
       const reason = `${p.id === "claude" ? "Claude" : "ChatGPT"} (${p.model}): ${describeError(err)}`;
       console.error("[ai-worksheet]", reason);
@@ -349,4 +392,55 @@ export async function generateWorksheet(
     }
   }
   throw new Error(failures.join(" | "));
+}
+
+export async function generateWorksheet(
+  input: GenerateInput,
+  onProgress: (p: GenerateProgress) => void = () => {}
+): Promise<GenerateResult> {
+  const job = { system: SYSTEM_PROMPT, user: userPrompt(input), schemaName: "worksheet", schema: WORKSHEET_SCHEMA };
+  const r = await runProviders(job, (raw) => assemble(raw, input), onProgress);
+  return { data: r.value, provider: r.provider, model: r.model, failures: r.failures };
+}
+
+// ---------------------------------------------------------------------------
+// Challenge questions for an existing worksheet (editor's "Generate" button).
+
+export type ChallengeContext = {
+  title: string;
+  subject: string;
+  grade: string;
+  questions: { skillTag: string | null; text: string; correctAnswer: string }[];
+};
+
+const CHALLENGE_SYSTEM_PROMPT = `You are an AI tutor designer for the ICE Learning platform, a bilingual (French + English) adaptive-learning site for middle- and high-school science and mathematics. A teacher has a worksheet and wants challenge questions for the students who master it. You are given the worksheet's questions; write challenge questions on the same chapter. Your output is added to the worksheet, then reviewed by the teacher.
+
+${CHALLENGE_RULES}
+
+## Bilingual content
+- Every text field has a French (…Fr) and an English (…En) version. Translate naturally and adapt notation; don't translate word for word.
+- French uses « guillemets »; English uses "…".
+- Use proper Unicode symbols (∠ △ ≅ ∥ ° → ² ₁ ½ · α β π ≤ ≥ ≠), never ASCII fallbacks like "<=" or "triangle ABC".
+- Text fields may use the HTML tags <strong>, <em>, <code>, <br> and <pre> (for code). No other HTML, no Markdown.
+- Do not repeat or lightly rephrase a worksheet question.`;
+
+const challengesResultSchema = z.object({
+  challenges: z.array(challengeImportSchema).min(1),
+});
+
+export async function generateChallenges(ctx: ChallengeContext): Promise<{ challenges: ChallengeImport[]; provider: Provider; model: string }> {
+  const strip = (t: string) => t.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const user = [
+    `Subject: ${ctx.subject}`,
+    `Grade: ${ctx.grade}`,
+    `Worksheet: ${ctx.title}`,
+    "",
+    "Worksheet questions:",
+    ...ctx.questions.map(
+      (q, i) => `${i + 1}. ${q.skillTag ? `[${q.skillTag}] ` : ""}${strip(q.text)}\n   Correct answer: ${strip(q.correctAnswer)}`
+    ),
+  ].join("\n");
+  const job = { system: CHALLENGE_SYSTEM_PROMPT, user, schemaName: "challenges", schema: CHALLENGES_SCHEMA };
+  const r = await runProviders(job, (raw) => challengesResultSchema.parse(raw).challenges.slice(0, CHALLENGE_COUNT), () => {});
+  return { challenges: r.value, provider: r.provider, model: r.model };
 }

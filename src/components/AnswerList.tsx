@@ -79,10 +79,14 @@ export function AnswerList({
   questions,
   answers,
   lang,
+  numberPrefix = "Q",
+  anchorPrefix = "q",
 }: {
   questions: AnswerListQuestion[];
   answers: Record<string, AnswerListAnswer>;
   lang: Lang;
+  numberPrefix?: string;
+  anchorPrefix?: string;
 }) {
   return (
     <div className="col" style={{ gap: 14 }}>
@@ -94,9 +98,12 @@ export function AnswerList({
         const followUps = q.followUps.filter((fu) => offered || answers[fu.id]);
         const followUpsCorrect = followUps.filter((fu) => answers[fu.id]?.isCorrect).length;
         return (
-          <div key={q.id} id={`q-${idx + 1}`} className="card" style={{ padding: 20, scrollMarginTop: 24 }}>
+          <div key={q.id} id={`${anchorPrefix}-${idx + 1}`} className="card" style={{ padding: 20, scrollMarginTop: 24 }}>
             <div className="row" style={{ gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-              <span className="badge badge--grade">Q{idx + 1}</span>
+              <span className="badge badge--grade">
+                {numberPrefix}
+                {idx + 1}
+              </span>
               <StatusBadge answer={answer} lang={lang} />
               {followUps.length > 0 && (
                 <span className="badge badge--draft numeric">

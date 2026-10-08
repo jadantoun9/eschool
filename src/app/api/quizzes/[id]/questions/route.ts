@@ -31,12 +31,14 @@ const PartInput = z.object({
 
 const QuestionInput = z.object({
   order: z.number().int().min(0),
+  isChallenge: z.boolean().optional().default(false),
   partClientId: z.string().optional().nullable(),
   skillTag: z.string().trim().optional().nullable(),
   textFr: z.string().trim().min(1),
   textEn: z.string().trim().optional().nullable(),
   hintFr: z.string().trim().optional().nullable(),
   hintEn: z.string().trim().optional().nullable(),
+  diagramSvg: z.string().optional().nullable(),
   linkUrl: z.string().trim().url().optional().nullable().or(z.literal("")),
   linkLabelFr: z.string().trim().optional().nullable(),
   linkLabelEn: z.string().trim().optional().nullable(),
@@ -124,13 +126,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     questionRows.push({
       id: mainId,
       quizId: id,
-      partId: q.partClientId ? partIdByClientId.get(q.partClientId) ?? null : null,
+      partId: q.isChallenge || !q.partClientId ? null : partIdByClientId.get(q.partClientId) ?? null,
       order: q.order,
+      isChallenge: q.isChallenge,
       skillTag: q.skillTag || null,
       textFr: q.textFr,
       textEn: q.textEn || null,
       hintFr: q.hintFr || null,
       hintEn: q.hintEn || null,
+      diagramSvg: q.diagramSvg || null,
       linkUrl: q.linkUrl || null,
       linkLabelFr: q.linkLabelFr || null,
       linkLabelEn: q.linkLabelEn || null,
@@ -140,7 +144,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     for (const o of q.options) {
       optionRows.push({ id: randomUUID(), questionId: mainId, letter: o.letter, textFr: o.textFr, textEn: o.textEn || null, isCorrect: o.isCorrect });
     }
-    if (q.remediation) {
+    if (q.remediation && !q.isChallenge) {
       remediationRows.push({
         id: randomUUID(),
         questionId: mainId,
@@ -150,7 +154,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         videoTitle: q.remediation.videoTitle || null,
       });
     }
-    for (const fu of q.followUps ?? []) {
+    for (const fu of q.isChallenge ? [] : q.followUps ?? []) {
       const fuId = randomUUID();
       questionRows.push({
         id: fuId,

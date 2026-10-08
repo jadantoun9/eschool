@@ -1214,6 +1214,37 @@ export default function ImportClient({
           </div>
         </div>
       ))}
+
+      {data!.challenges.length > 0 && (
+        <div className="card">
+          <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: 14, marginBottom: 16 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>★ {t("import.challengesLabel", lang)}</div>
+            <p className="muted" style={{ fontSize: 13 }}>{t("import.challengesHint", lang)}</p>
+          </div>
+          <div className="col" style={{ gap: 14 }}>
+            {data!.challenges.map((c, ci) => (
+              <div
+                key={ci}
+                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+              >
+                <div className="muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>
+                  ★ {ci + 1}
+                </div>
+                <p
+                  style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, marginBottom: 12 }}
+                  dangerouslySetInnerHTML={{ __html: loc(isEn, c.textFr, c.textEn) }}
+                />
+                <MiniChoices options={c.options} correctIndex={c.correctIndex} isEn={isEn} />
+                <div
+                  className="muted"
+                  style={{ fontSize: 13.5, lineHeight: 1.6, marginTop: 12 }}
+                  dangerouslySetInnerHTML={{ __html: loc(isEn, c.explanationFr, c.explanationEn) }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
         </>
       )}
 

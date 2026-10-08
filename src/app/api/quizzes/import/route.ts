@@ -128,6 +128,24 @@ export async function POST(req: Request) {
     }
   });
 
+  for (const c of data.challenges) {
+    const challengeId = randomUUID();
+    questionRows.push({
+      id: challengeId,
+      quizId,
+      order: qOrder++,
+      isChallenge: true,
+      textFr: c.textFr,
+      textEn: c.textEn,
+      hintFr: c.hintFr ?? null,
+      hintEn: c.hintEn ?? null,
+      diagramSvg: c.diagramSvg ?? null,
+      explanationFr: c.explanationFr,
+      explanationEn: c.explanationEn,
+    });
+    addOptions(challengeId, c.options, c.correctIndex);
+  }
+
   await prisma.$transaction(
     async (tx) => {
       await tx.quiz.create({

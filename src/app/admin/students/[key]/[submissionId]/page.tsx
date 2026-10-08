@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 import { BackLink } from "@/components/BackLink";
 import { AnswerList, type AnswerListAnswer } from "@/components/AnswerList";
 import { SubmissionSummary } from "@/components/SubmissionSummary";
-import { answerWithQuestion, followUpStats, scoreColor, scorePct, studentKey } from "@/lib/students";
+import { answerWithQuestion, challengeStats, followUpStats, scoreColor, scorePct, studentKey } from "@/lib/students";
 
 const optionSelect = {
   orderBy: { letter: "asc" as const },
@@ -37,7 +37,7 @@ export default async function StudentSubmissionPage({
             select: { id: true, titleFr: true, titleEn: true },
           },
           questions: {
-            where: { parentId: null },
+            where: { parentId: null, isChallenge: false },
             orderBy: { order: "asc" },
             select: {
               id: true,
@@ -53,6 +53,7 @@ export default async function StudentSubmissionPage({
               },
             },
           },
+
         },
       },
     },
@@ -65,7 +66,13 @@ export default async function StudentSubmissionPage({
   for (const a of sub.answers) answers[a.questionId] = { chosenLetter: a.chosenLetter, isCorrect: a.isCorrect };
 
   const pct = scorePct(sub.score, sub.total);
+  const challenges = await prisma.question.findMany({
+    where: { quizId: sub.quizId, isChallenge: true },
+    orderBy: { order: "asc" },
+    select: { id: true, skillTag: true, textFr: true, textEn: true, options: optionSelect },
+  });
   const fu = followUpStats(sub.answers);
+  const ch = challengeStats(sub, challenges.length);
   const fuPct = scorePct(fu.correct, fu.total);
   const title = lang === "en" && sub.quiz.titleEn ? sub.quiz.titleEn : sub.quiz.titleFr;
   const locale = lang === "fr" ? "fr-FR" : "en-US";
@@ -112,12 +119,38 @@ export default async function StudentSubmissionPage({
             </div>
             <div className="stat__label">{t("students.followUpScore", lang)}</div>
           </div>
+          {ch && (
+            <div className="stat" title={t("students.challengeHint", lang)}>
+              <div
+                className="stat__num numeric"
+                style={ch.answered > 0 ? { color: "var(--accent)" } : { fontSize: 18 }}
+              >
+                {ch.answered > 0 ? `${ch.correct}/${ch.total}` : t("students.followUpNotTried", lang)}
+              </div>
+              <div className="stat__label">★ {t("students.challengeScore", lang)}</div>
+            </div>
+          )}
         </div>
       </div>
 
       <SubmissionSummary parts={sub.quiz.parts} questions={sub.quiz.questions} answers={answers} lang={lang} />
 
       <AnswerList questions={sub.quiz.questions} answers={answers} lang={lang} />
+
+      {ch && (
+        <>
+          <div className="eyebrow" style={{ margin: "36px 0 14px" }}>
+            ★ {t("students.challengeSection", lang)}
+          </div>
+          <AnswerList
+            questions={challenges.map((c) => ({ ...c, remediation: null, followUps: [] }))}
+            answers={answers}
+            lang={lang}
+            numberPrefix="★"
+            anchorPrefix="c"
+          />
+        </>
+      )}
 
       <div style={{ height: 80 }} />
     </>

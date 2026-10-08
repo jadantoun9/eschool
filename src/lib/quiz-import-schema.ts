@@ -44,6 +44,19 @@ const questionSchema = z.object({
   remediation: remediationSchema,
 });
 
+// "Go further" question for students who score high; no remediation.
+export const challengeSchema = z.object({
+  textFr: z.string().min(1),
+  textEn: z.string().min(1),
+  hintFr: z.string().nullable().optional(),
+  hintEn: z.string().nullable().optional(),
+  diagramSvg: z.string().nullable().optional(),
+  correctIndex: z.number().int().min(0).max(3),
+  options: z.array(optionSchema).length(4),
+  explanationFr: z.string().min(1),
+  explanationEn: z.string().min(1),
+});
+
 const partSchema = z.object({
   titleFr: z.string().min(1),
   titleEn: z.string().min(1),
@@ -73,7 +86,9 @@ export const quizImportSchema = z.object({
   gradeSlug: z.string().min(1),
   prelim: prelimSchema.nullable().optional(),
   parts: z.array(partSchema).min(1),
+  challenges: z.array(challengeSchema).max(5).optional().default([]),
 });
 
 export type QuizImport = z.infer<typeof quizImportSchema>;
 export type QuestionImport = z.infer<typeof questionSchema>;
+export type ChallengeImport = z.infer<typeof challengeSchema>;

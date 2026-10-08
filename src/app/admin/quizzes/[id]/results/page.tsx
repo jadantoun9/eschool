@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
-import { answerWithQuestion, followUpLabel, followUpStats, studentKey } from "@/lib/students";
+import { answerWithQuestion, challengeStats, followUpLabel, followUpStats, studentKey } from "@/lib/students";
 import {
   SkillBreakdownRow,
   type BreakdownQuestion,
@@ -20,7 +20,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
     where: { id },
     include: {
       questions: {
-        where: { parentId: null },
+        where: { parentId: null, isChallenge: false },
         orderBy: { order: "asc" },
         select: {
           id: true,
@@ -115,7 +115,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
 
   // KPI: completion rate (submissions that answered all main questions)
   const completedCount = quiz.submissions.filter(
-    (sub) => sub.answers.filter((a) => !a.question.parentId).length >= total
+    (sub) => sub.answers.filter((a) => !a.question.parentId && !a.question.isChallenge).length >= total
   ).length;
 
   // KPI: follow-up score, over the submissions where follow-ups were tried.
@@ -124,6 +124,10 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
   const fuCorrect = fuTried.reduce((n, s) => n + s.correct, 0);
   const fuTotal = fuTried.reduce((n, s) => n + s.total, 0);
   const fuPct = fuTotal === 0 ? null : Math.round((fuCorrect / fuTotal) * 100);
+
+  // Challenge questions, offered to high scorers.
+  const challengeCount = await prisma.question.count({ where: { quizId: quiz.id, isChallenge: true } });
+  const chStats = new Map(quiz.submissions.map((sub) => [sub.id, challengeStats(sub, challengeCount)]));
   const completionPct =
     submissionCount === 0 ? 0 : Math.round((completedCount / submissionCount) * 100);
 
@@ -607,6 +611,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
                 <th>{t("results.col.score", lang)}</th>
                 <th>{t("results.col.pct", lang)}</th>
                 <th title={t("students.followUpScoreHint", lang)}>{t("results.col.followUps", lang)}</th>
+                {challengeCount > 0 && <th title={t("students.challengeHint", lang)}>★ {t("results.col.challenge", lang)}</th>}
                 <th>{t("results.col.lang", lang)}</th>
                 <th>{t("results.col.date", lang)}</th>
               </tr>
@@ -628,6 +633,14 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
                       {pct}%
                     </td>
                     <td className="numeric muted">{followUpLabel(fuStats.get(sub.id)!)}</td>
+                    {challengeCount > 0 && (
+                      <td className="numeric" style={{ color: "var(--accent)" }}>
+                        {(() => {
+                          const ch = chStats.get(sub.id);
+                          return ch && ch.answered > 0 ? `${ch.correct}/${ch.total}` : <span className="muted">—</span>;
+                        })()}
+                      </td>
+                    )}
                     <td>
                       <span className="badge badge--draft">
                         {sub.language.toUpperCase()}

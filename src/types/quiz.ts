@@ -86,12 +86,29 @@ export const QuestionCorrection = z.object({
     .nullable(),
 });
 
+// Students scoring this percentage or more get the worksheet's challenge
+// ("go further") questions after submitting.
+export const CHALLENGE_MIN_PCT = 85;
+
+export const ChallengeQuestion = z.object({
+  id: z.string(),
+  text: z.string(),
+  hint: z.string().nullable(),
+  diagramSvg: z.string().nullable(),
+  options: z.array(z.object({ letter: z.string(), text: z.string(), isCorrect: z.boolean() })),
+  correctLetter: z.string(),
+  explanation: z.string(),
+});
+
 export const SubmitResponse = z.object({
   submissionId: z.string(),
   score: z.number(),
   total: z.number(),
   corrections: z.array(QuestionCorrection),
+  // Only when the score reaches CHALLENGE_MIN_PCT.
+  challenges: z.array(ChallengeQuestion).optional(),
 });
+export type ChallengeQuestion = z.infer<typeof ChallengeQuestion>;
 export type SubmitResponse = z.infer<typeof SubmitResponse>;
 export type QuestionCorrection = z.infer<typeof QuestionCorrection>;
 

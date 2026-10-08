@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MathJaxContext, MathJax } from "better-react-mathjax";
 import { Skeleton } from "@/components/Skeleton";
-import type { Lang, SubmitResponse } from "@/types/quiz";
+import { CHALLENGE_MIN_PCT, type ChallengeQuestion, type Lang, type SubmitResponse } from "@/types/quiz";
 import { t } from "@/lib/i18n";
 
 type PublicQuestion = {
@@ -373,6 +373,7 @@ export default function QuizClient({ slug, lang }: { slug: string; lang: Lang })
         <ResultsView
           result={result}
           lang={lang}
+          studentName={studentName.trim()}
           followUpAnswers={followUpAnswers}
           setFollowUpAnswers={setFollowUpAnswers}
         />
@@ -517,11 +518,13 @@ function PrelimCard({ prelim, lang }: { prelim: PublicPrelim; lang: Lang }) {
 function ResultsView({
   result,
   lang,
+  studentName,
   followUpAnswers,
   setFollowUpAnswers,
 }: {
   result: SubmitResponse;
   lang: Lang;
+  studentName: string;
   followUpAnswers: Record<string, string>;
   setFollowUpAnswers: (v: Record<string, string>) => void;
 }) {
@@ -539,16 +542,27 @@ function ResultsView({
   const offeredFollowUps = result.corrections.flatMap((c) => c.remediation?.followUps ?? []);
   const followUpCorrect = offeredFollowUps.filter((fu) => followUpAnswers[fu.id] === fu.correctLetter).length;
 
-  // Follow-ups are answered after the submission exists, so each answer is
-  // saved on its own for the teacher's report.
-  function answerFollowUp(questionId: string, letter: string) {
-    setFollowUpAnswers({ ...followUpAnswers, [questionId]: letter });
-    fetch("/api/public/submit/followup", {
+  // Follow-up and challenge questions are answered after the submission
+  // exists, so each answer is saved on its own for the teacher's report.
+  function saveAnswer(questionId: string, letter: string) {
+    fetch("/api/public/submit/answer", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ submissionId: result.submissionId, questionId, chosenLetter: letter }),
       keepalive: true,
-    }).catch((e) => console.error("[follow-up]", e));
+    }).catch((e) => console.error("[answer]", e));
+  }
+  function answerFollowUp(questionId: string, letter: string) {
+    setFollowUpAnswers({ ...followUpAnswers, [questionId]: letter });
+    saveAnswer(questionId, letter);
+  }
+
+  const highScore = pct >= CHALLENGE_MIN_PCT;
+  const challenges = result.challenges ?? [];
+  const [challengeAnswers, setChallengeAnswers] = useState<Record<string, string>>({});
+  function answerChallenge(questionId: string, letter: string) {
+    setChallengeAnswers({ ...challengeAnswers, [questionId]: letter });
+    saveAnswer(questionId, letter);
   }
 
   return (
@@ -634,6 +648,16 @@ function ResultsView({
           )}
         </div>
       </div>
+
+      {highScore && (
+        <ChallengeSection
+          lang={lang}
+          firstName={studentName.split(/\s+/)[0] ?? ""}
+          challenges={challenges}
+          answers={challengeAnswers}
+          onAnswer={answerChallenge}
+        />
+      )}
 
       {/* Per-question corrections */}
       <div className="card">
@@ -890,5 +914,135 @@ function ResultsView({
         ))}
       </div>
     </MathJax>
+  );
+}
+
+// Shown to students who scored CHALLENGE_MIN_PCT or more: encouragement, then
+// the worksheet's challenge questions (if it has any), answered one by one.
+function ChallengeSection({
+  lang,
+  firstName,
+  challenges,
+  answers,
+  onAnswer,
+}: {
+  lang: Lang;
+  firstName: string;
+  challenges: ChallengeQuestion[];
+  answers: Record<string, string>;
+  onAnswer: (questionId: string, letter: string) => void;
+}) {
+  const answeredCount = challenges.filter((c) => answers[c.id]).length;
+  const correctCount = challenges.filter((c) => answers[c.id] === c.correctLetter).length;
+  const allDone = challenges.length > 0 && answeredCount === challenges.length;
+
+  return (
+    <div
+      className="card"
+      style={{
+        marginBottom: 24,
+        border: "1px solid rgba(255,204,0,0.35)",
+        background: "linear-gradient(180deg, rgba(255,204,0,0.08), transparent 220px)",
+      }}
+    >
+      <div style={{ fontSize: 34, lineHeight: 1, marginBottom: 12 }} aria-hidden>
+        🌟
+      </div>
+      <div className="h3" style={{ marginBottom: 8 }}>
+        {t("student.highScoreTitle", lang).replace("{name}", firstName)}
+      </div>
+      <p className="muted" style={{ fontSize: 15, lineHeight: 1.6, margin: 0 }}>
+        {challenges.length > 0 ? t("student.highScoreChallenge", lang) : t("student.highScoreNoChallenge", lang)}
+      </p>
+
+      {challenges.length > 0 && (
+        <>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", margin: "28px 0 18px", gap: 12 }}>
+            <div className="eyebrow">{t("student.challengeTitle", lang)}</div>
+            <span className="badge badge--accent numeric">
+              {correctCount}/{challenges.length}
+            </span>
+          </div>
+
+          {challenges.map((c, i) => {
+            const picked = answers[c.id];
+            const answered = picked != null;
+            const ok = answered && picked === c.correctLetter;
+            return (
+              <div key={c.id} style={{ marginBottom: 28 }}>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, lineHeight: 1.4, color: "#fff", marginBottom: 10 }}>
+                  <span style={{ color: "var(--accent)", marginRight: 8 }}>★ {i + 1}.</span>
+                  <span dangerouslySetInnerHTML={{ __html: c.text }} />
+                </div>
+                {c.hint && (
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+                    {t("student.hint", lang)}
+                    <span dangerouslySetInnerHTML={{ __html: c.hint }} />
+                  </div>
+                )}
+                {c.diagramSvg && (
+                  <div style={{ maxWidth: 360, margin: "0 0 14px" }} dangerouslySetInnerHTML={{ __html: c.diagramSvg }} />
+                )}
+                <div className="col" style={{ gap: 10 }}>
+                  {c.options.map((o) => {
+                    let cls = "quiz-option";
+                    if (answered) {
+                      cls += " quiz-option--disabled";
+                      if (o.isCorrect) cls = "quiz-option quiz-option--correct";
+                      else if (picked === o.letter) cls = "quiz-option quiz-option--wrong";
+                    }
+                    return (
+                      <button
+                        key={o.letter}
+                        type="button"
+                        className={cls}
+                        style={answered ? { cursor: "default" } : undefined}
+                        onClick={() => {
+                          if (!answered) onAnswer(c.id, o.letter);
+                        }}
+                      >
+                        <span className="quiz-option__letter">{o.letter}</span>
+                        <span className="quiz-option__text" dangerouslySetInnerHTML={{ __html: o.text }} />
+                      </button>
+                    );
+                  })}
+                </div>
+                {answered && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: 14,
+                      borderRadius: "var(--radius)",
+                      background: ok ? "var(--success-bg)" : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${ok ? "rgba(34,197,94,0.3)" : "var(--border)"}`,
+                      fontSize: 14,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, marginBottom: 4, color: ok ? "#86efac" : "var(--accent)" }}>
+                      {ok ? t("student.challengeRight", lang) : t("student.challengeWrong", lang)}
+                    </div>
+                    {c.explanation && <div style={{ color: "#e2e8f0" }} dangerouslySetInnerHTML={{ __html: c.explanation }} />}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {allDone && (
+            <div className="h4" style={{ textAlign: "center", color: "var(--accent)" }}>
+              {(correctCount === challenges.length
+                ? t("student.challengeDoneAll", lang)
+                : correctCount > 0
+                ? t("student.challengeDoneSome", lang)
+                : t("student.challengeDoneNone", lang)
+              )
+                .replace("{n}", String(correctCount))
+                .replace("{total}", String(challenges.length))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }

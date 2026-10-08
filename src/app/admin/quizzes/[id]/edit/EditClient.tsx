@@ -29,6 +29,9 @@ type Part = {
 type Question = {
   clientId: string;
   partClientId: string | null;
+  // Challenge questions have no part, remediation or follow-ups.
+  isChallenge?: boolean;
+  diagramSvg?: string | null;
   skillTag?: string | null;
   textFr: string;
   textEn?: string | null;
@@ -69,6 +72,8 @@ type QuizDto = {
   questions: {
     partId: string | null;
     order: number;
+    isChallenge: boolean;
+    diagramSvg: string | null;
     skillTag: string | null;
     textFr: string;
     textEn: string | null;
@@ -94,6 +99,9 @@ function emptyQuestion(partClientId: string | null): Question {
     options: LETTERS.slice(0, 4).map((l, i) => ({ letter: l, textFr: "", isCorrect: i === 0 })),
     followUps: [],
   };
+}
+function emptyChallenge(): Question {
+  return { ...emptyQuestion(null), isChallenge: true };
 }
 function emptyPart(): Part {
   return { clientId: cid(), titleFr: "Nouvelle partie" };
@@ -168,7 +176,7 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
   // Auto-migrate any unparted questions into a default part so the new UI
   // (where every question lives inside a part) has somewhere to render them.
   const dbIdToClientId = new Map(quiz.parts.map((p) => [p.id, cid()]));
-  const hasUnparted = quiz.questions.some((q) => !q.partId);
+  const hasUnparted = quiz.questions.some((q) => !q.partId && !q.isChallenge);
   const defaultPartClientId = hasUnparted ? cid() : null;
 
   const [parts, setParts] = useState<Part[]>(() => {
@@ -195,9 +203,13 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
     quiz.questions.length > 0
       ? quiz.questions.map((q) => ({
           clientId: cid(),
-          partClientId: q.partId
+          partClientId: q.isChallenge
+            ? null
+            : q.partId
             ? dbIdToClientId.get(q.partId) ?? null
             : defaultPartClientId,
+          isChallenge: q.isChallenge,
+          diagramSvg: q.diagramSvg,
           skillTag: q.skillTag,
           textFr: q.textFr,
           textEn: q.textEn,
@@ -221,6 +233,33 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  // Drafts challenge questions with AI from the saved worksheet; they are
+  // added to the form and saved with the rest.
+  const [challengeBusy, setChallengeBusy] = useState(false);
+  const [challengeMsg, setChallengeMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  async function generateChallengeQuestions() {
+    setChallengeBusy(true);
+    setChallengeMsg(null);
+    try {
+      const res = await fetch(`/api/quizzes/${quiz.id}/challenges`, { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      const drafts = (j.challenges as Omit<Question, "clientId" | "partClientId" | "followUps">[]).map((c) => ({
+        ...c,
+        clientId: cid(),
+        partClientId: null,
+        isChallenge: true,
+        followUps: [],
+      }));
+      setQuestions((qs) => [...qs, ...drafts]);
+      setChallengeMsg({ kind: "ok", text: s["edit.challenges.generated"].replace("{n}", String(drafts.length)) });
+    } catch (e) {
+      setChallengeMsg({ kind: "err", text: `${s["edit.challenges.error"]} ${(e as Error).message}` });
+    } finally {
+      setChallengeBusy(false);
+    }
+  }
 
   function updateQ(i: number, patch: Partial<Question>) {
     setQuestions((qs) => qs.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
@@ -360,6 +399,8 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
         })),
         questions: questions.map((q, idx) => ({
           order: idx + 1,
+          isChallenge: !!q.isChallenge,
+          diagramSvg: q.diagramSvg || null,
           partClientId: q.partClientId,
           skillTag: q.skillTag || null,
           textFr: q.textFr,
@@ -768,6 +809,64 @@ export default function EditClient({ quiz, strings }: { quiz: QuizDto; strings: 
           </button>
         </div>
 
+        {/* Challenge questions */}
+        <div className="card col" style={{ gap: 14 }}>
+          <div className="row" style={{ flexWrap: "wrap", gap: 10 }}>
+            <span className="badge badge--accent">★ {s["edit.challenges.title"]}</span>
+          </div>
+          <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+            {s["edit.challenges.desc"]}
+          </p>
+          {questions.map((q, i) =>
+            !q.isChallenge ? null : (
+              <div key={q.clientId} className="card" style={{ background: "var(--surface-2)" }}>
+                <div className="row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                  <span className="h4" style={{ flex: 1 }}>
+                    {s["edit.challenge"]} {questions.slice(0, i + 1).filter((x) => x.isChallenge).length}
+                  </span>
+                  <button
+                    className="icon-btn icon-btn--danger"
+                    title={s["edit.delete"]}
+                    onClick={() => setQuestions((qs) => qs.filter((_, idx) => idx !== i))}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="divider" style={{ margin: "0 0 16px" }} />
+                <QuestionBody
+                  q={q}
+                  i={i}
+                  s={s}
+                  updateQ={updateQ}
+                  updateOpt={updateOpt}
+                  setCorrect={setCorrect}
+                  addOption={addOption}
+                  removeOption={removeOption}
+                />
+              </div>
+            )
+          )}
+          <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+            <button className="btn btn--ghost btn--sm" onClick={() => setQuestions((qs) => [...qs, emptyChallenge()])}>
+              {s["edit.challenges.add"]}
+            </button>
+            <button className="btn btn--ghost btn--sm" onClick={generateChallengeQuestions} disabled={challengeBusy}>
+              {challengeBusy ? (
+                <span className="row" style={{ gap: 8 }}>
+                  <Spinner size={14} /> {s["edit.challenges.generating"]}
+                </span>
+              ) : (
+                <>✦ {s["edit.challenges.generate"]}</>
+              )}
+            </button>
+          </div>
+          {challengeMsg && (
+            <div style={{ fontSize: 13, color: challengeMsg.kind === "ok" ? "#86efac" : "#fca5a5" }}>
+              {challengeMsg.text}
+            </div>
+          )}
+        </div>
+
         {msg && (
           <div
             className="card"
@@ -999,13 +1098,15 @@ function QuestionBody({
         />
       </div>
 
-      <RemediationEditor
-        s={s}
-        value={q.remediation ?? null}
-        onChange={(rm) => updateQ(i, { remediation: rm })}
-      />
+      {!q.isChallenge && (
+        <RemediationEditor
+          s={s}
+          value={q.remediation ?? null}
+          onChange={(rm) => updateQ(i, { remediation: rm })}
+        />
+      )}
 
-      {q.remediation && (
+      {q.remediation && !q.isChallenge && (
         <FollowUpsEditor
           s={s}
           followUps={q.followUps}

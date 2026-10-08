@@ -110,6 +110,11 @@ model Question {
   linkLabelFr   String?
   linkLabelEn   String?
 
+  // Challenge ("go further") question: offered after submission to students
+  // who scored CHALLENGE_MIN_PCT or more. Never part of the score; has no part,
+  // remediation or follow-ups.
+  isChallenge   Boolean      @default(false)
+
   options       Option[]
   remediation   Remediation?
 

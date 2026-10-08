@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
       subject: true,
       grade: true,
       teacher: { select: { name: true } },
-      _count: { select: { questions: { where: { parentId: null } }, submissions: true } },
+      _count: { select: { questions: { where: { parentId: null, isChallenge: false } }, submissions: true } },
     },
   });
 

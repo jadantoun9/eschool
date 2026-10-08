@@ -19,7 +19,7 @@ export async function GET(
       grade: true,
       parts: { orderBy: { order: "asc" } },
       questions: {
-        where: { parentId: null },
+        where: { parentId: null, isChallenge: false },
         orderBy: { order: "asc" },
         include: { options: true, remediation: { select: { id: true } } },
       },

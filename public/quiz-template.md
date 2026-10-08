@@ -69,6 +69,14 @@ Each main question can carry a `link`: one resource the student can open next to
 - `labelFr` / `labelEn`: a short title saying what it is and where it comes from, e.g. `"Vidéo Khan Academy — rapport des aires de triangles semblables"` / `"Khan Academy video — ratio of areas of similar triangles"`.
 - If web browsing is unavailable, set `link` to `null` on every question.
 
+### Challenge questions ("go further") — required
+Add exactly **3** `challenges` at the quiz level. They are offered only to students who score **85% or more**, after they submit, to take them beyond what is expected at their grade. They don't count in the score.
+- Each one is **clearly harder than every main question**: multi-step reasoning, combining two or more skills of the quiz, an unfamiliar context, a "why does this always work" or generalisation angle, or a first step into the next chapter's ideas.
+- Each stays **within reach of a strong student** who has mastered this chapter — no techniques from far beyond the grade.
+- Same format as a main question: exactly 4 options, the 3 wrong ones encoding mistakes a strong student could still make, one correct (`correctIndex`).
+- `explanationFr` / `explanationEn`: 2–4 sentences walking through the reasoning, shown after the student answers.
+- No `skillTag`, `remediation`, follow-ups or videos on challenge questions.
+
 ### Optional fields
 - `hintFr` / `hintEn` — short nudge shown under the question text. Use sparingly (1–2 questions per quiz).
 - `diagramSvg` — if a small SVG diagram would help, provide it inline as a string. Use `viewBox="0 0 240 130"` and simple shapes. Most questions won't need one.
@@ -174,6 +182,27 @@ The teacher will either upload the `.json` file or paste the text on the platfor
       ]
     }
     // … more parts …
+  ],
+
+  // REQUIRED — exactly 3 harder "go further" questions for students who score 85%+
+  "challenges": [
+    {
+      "textFr": "Question défi en français ?",
+      "textEn": "Challenge question in English?",
+      "hintFr": null,                          // optional
+      "hintEn": null,
+      "diagramSvg": null,                      // optional
+      "correctIndex": 3,
+      "options": [
+        { "textFr": "A FR", "textEn": "A EN" },
+        { "textFr": "B FR", "textEn": "B EN" },
+        { "textFr": "C FR", "textEn": "C EN" },
+        { "textFr": "D FR", "textEn": "D EN" }
+      ],
+      "explanationFr": "Raisonnement détaillé…",
+      "explanationEn": "Worked reasoning…"
+    }
+    // … 2 more challenges …
   ]
 }
 ```
@@ -254,5 +283,6 @@ The teacher will either upload the `.json` file or paste the text on the platfor
 - Every question (main and follow-up) must have exactly 4 options.
 - Every text field has both `Fr` and `En` variants.
 - **Videos: only real, web-verified YouTube URLs. Never placeholders or guesses — omit the `videos` array if you can't verify a real link.**
+- **Challenges: exactly 3 harder "go further" questions in `challenges`, each with 4 options and an explanation.**
 - **Links: one video or interactive activity per question, very relevant to that exact question, real and web-verified — otherwise `"link": null`.**
 - Use real Unicode for symbols: ∠ △ ≅ ∥ ° → ² ₁ ½ · α β π, etc.

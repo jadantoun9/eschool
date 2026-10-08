@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { SubmitPayload } from "@/types/quiz";
+import { SubmitPayload, type ChallengeQuestion } from "@/types/quiz";
 import { grade } from "@/lib/grading";
+import { challengeOffered } from "@/lib/students";
 
 export async function POST(req: Request) {
   const json = await req.json().catch(() => null);
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
     where: { slug },
     include: {
       questions: {
-        where: { parentId: null },
+        where: { parentId: null, isChallenge: false },
         orderBy: { order: "asc" },
         include: {
           options: true,
@@ -79,10 +80,31 @@ export async function POST(req: Request) {
     },
   });
 
+  // High scorers get the worksheet's challenge questions to go further.
+  let challenges: ChallengeQuestion[] | undefined;
+  if (challengeOffered(score, total)) {
+    const loc = (fr: string | null, en: string | null) => (language === "en" && en ? en : fr ?? "");
+    const rows = await prisma.question.findMany({
+      where: { quizId: quiz.id, isChallenge: true },
+      orderBy: { order: "asc" },
+      include: { options: { orderBy: { letter: "asc" } } },
+    });
+    challenges = rows.map((c) => ({
+      id: c.id,
+      text: loc(c.textFr, c.textEn),
+      hint: c.hintFr ? loc(c.hintFr, c.hintEn) : null,
+      diagramSvg: c.diagramSvg,
+      options: c.options.map((o) => ({ letter: o.letter, text: loc(o.textFr, o.textEn), isCorrect: o.isCorrect })),
+      correctLetter: c.options.find((o) => o.isCorrect)?.letter ?? "",
+      explanation: loc(c.explanationFr, c.explanationEn),
+    }));
+  }
+
   return NextResponse.json({
     submissionId: submission.id,
     score,
     total,
     corrections,
+    challenges,
   });
 }
