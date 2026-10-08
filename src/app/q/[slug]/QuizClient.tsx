@@ -12,7 +12,6 @@ type PublicQuestion = {
   order: number;
   text: string;
   hint: string | null;
-  link: { url: string; label: string | null } | null;
   options: { id: string; letter: string; text: string }[];
   hasRemediation: boolean;
 };
@@ -301,7 +300,6 @@ export default function QuizClient({ slug, lang }: { slug: string; lang: Lang })
                   <span dangerouslySetInnerHTML={{ __html: q.hint }} />
                 </div>
               )}
-              {q.link && <QuestionLink link={q.link} lang={lang} />}
               <div className="qp__options">
                 {q.options.map((o) => {
                   const selected = answers[q.id] === o.letter;
@@ -444,8 +442,6 @@ function QuestionLink({ link, lang }: { link: { url: string; label: string | nul
         display: "flex",
         gap: 14,
         padding: "12px 14px",
-        marginTop: -12,
-        marginBottom: 22,
         background: "rgba(255,204,0,0.06)",
         border: "1px solid var(--border-accent)",
         borderRadius: "var(--radius)",
@@ -746,6 +742,11 @@ function ResultsView({
                   style={{ fontSize: 14, color: "#e2e8f0", lineHeight: 1.6 }}
                   dangerouslySetInnerHTML={{ __html: c.remediation.explanation }}
                 />
+                {c.remediation.link && (
+                  <div style={{ marginTop: 18 }}>
+                    <QuestionLink link={c.remediation.link} lang={lang} />
+                  </div>
+                )}
                 {c.remediation.videoUrl && (
                   <div style={{ marginTop: 18 }}>
                     <div

@@ -50,11 +50,12 @@ export function grade(args: {
         isCorrect: o.isCorrect,
       })),
       remediation:
-        !isCorrect && q.remediation
+        !isCorrect && (q.remediation || q.linkUrl)
           ? {
-              explanation: t(q.remediation.explanationFr, q.remediation.explanationEn, lang),
-              videoUrl: q.remediation.videoUrl ?? null,
-              videoTitle: q.remediation.videoTitle ?? null,
+              explanation: q.remediation ? t(q.remediation.explanationFr, q.remediation.explanationEn, lang) : "",
+              videoUrl: q.remediation?.videoUrl ?? null,
+              videoTitle: q.remediation?.videoTitle ?? null,
+              link: q.linkUrl ? { url: q.linkUrl, label: t(q.linkLabelFr, q.linkLabelEn, lang) || null } : null,
               followUps: q.followUps.map((fu) => {
                 const fuCorrect = fu.options.find((o) => o.isCorrect);
                 return {

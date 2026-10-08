@@ -74,6 +74,9 @@ export const QuestionCorrection = z.object({
       explanation: z.string(),
       videoUrl: z.string().nullable(),
       videoTitle: z.string().nullable(),
+      // Video or interactive activity matched to the question; only sent
+      // with the feedback for a wrong answer.
+      link: z.object({ url: z.string(), label: z.string().nullable() }).nullable(),
       followUps: z.array(
         z.object({
           id: z.string(),
