@@ -6,7 +6,15 @@ import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
 import { BackLink } from "@/components/BackLink";
 import { RowLink } from "@/components/RowLink";
-import { scoreColor, scorePct, studentKey, submissionScope } from "@/lib/students";
+import {
+  answerWithQuestion,
+  followUpLabel,
+  followUpStats,
+  scoreColor,
+  scorePct,
+  studentKey,
+  submissionScope,
+} from "@/lib/students";
 
 export default async function StudentPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -18,6 +26,7 @@ export default async function StudentPage({ params }: { params: Promise<{ key: s
     where: submissionScope(session.user),
     orderBy: { submittedAt: "desc" },
     include: {
+      answers: { include: answerWithQuestion },
       quiz: {
         select: {
           titleFr: true,
@@ -76,6 +85,9 @@ export default async function StudentPage({ params }: { params: Promise<{ key: s
               <th style={{ width: 160 }}>{t("students.col.subject", lang)}</th>
               <th style={{ width: 90, textAlign: "right" }}>{t("students.col.score", lang)}</th>
               <th style={{ width: 70, textAlign: "right" }}>%</th>
+              <th style={{ width: 90, textAlign: "right" }} title={t("students.followUpScoreHint", lang)}>
+                {t("students.followUpScore", lang)}
+              </th>
               <th style={{ width: 170 }}>{t("students.col.date", lang)}</th>
               <th style={{ width: 160, textAlign: "right" }} />
             </tr>
@@ -101,6 +113,9 @@ export default async function StudentPage({ params }: { params: Promise<{ key: s
                   </td>
                   <td className="numeric" style={{ textAlign: "right", fontWeight: 700, color: scoreColor(pct) }}>
                     {pct}%
+                  </td>
+                  <td className="numeric muted" style={{ textAlign: "right" }}>
+                    {followUpLabel(followUpStats(s.answers))}
                   </td>
                   <td className="muted">{s.submittedAt.toLocaleString(locale)}</td>
                   <td style={{ textAlign: "right" }}>

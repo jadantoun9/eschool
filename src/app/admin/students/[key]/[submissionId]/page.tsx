@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 import { BackLink } from "@/components/BackLink";
 import { AnswerList, type AnswerListAnswer } from "@/components/AnswerList";
 import { SubmissionSummary } from "@/components/SubmissionSummary";
-import { scoreColor, scorePct, studentKey } from "@/lib/students";
+import { answerWithQuestion, followUpStats, scoreColor, scorePct, studentKey } from "@/lib/students";
 
 const optionSelect = {
   orderBy: { letter: "asc" as const },
@@ -26,7 +26,7 @@ export default async function StudentSubmissionPage({
   const sub = await prisma.submission.findUnique({
     where: { id: submissionId },
     include: {
-      answers: true,
+      answers: { include: answerWithQuestion },
       quiz: {
         select: {
           teacherId: true,
@@ -46,6 +46,7 @@ export default async function StudentSubmissionPage({
               textFr: true,
               textEn: true,
               options: optionSelect,
+              remediation: { select: { id: true } },
               followUps: {
                 orderBy: { order: "asc" },
                 select: { id: true, skillTag: true, textFr: true, textEn: true, options: optionSelect },
@@ -64,6 +65,8 @@ export default async function StudentSubmissionPage({
   for (const a of sub.answers) answers[a.questionId] = { chosenLetter: a.chosenLetter, isCorrect: a.isCorrect };
 
   const pct = scorePct(sub.score, sub.total);
+  const fu = followUpStats(sub.answers);
+  const fuPct = scorePct(fu.correct, fu.total);
   const title = lang === "en" && sub.quiz.titleEn ? sub.quiz.titleEn : sub.quiz.titleFr;
   const locale = lang === "fr" ? "fr-FR" : "en-US";
 
@@ -95,6 +98,19 @@ export default async function StudentSubmissionPage({
               {pct}%
             </div>
             <div className="stat__label">%</div>
+          </div>
+          <div className="stat" title={t("students.followUpScoreHint", lang)}>
+            <div
+              className="stat__num numeric"
+              style={fu.total > 0 && fu.answered > 0 ? { color: scoreColor(fuPct) } : { fontSize: 18 }}
+            >
+              {fu.total === 0
+                ? t("students.followUpNone", lang)
+                : fu.answered === 0
+                ? t("students.followUpNotTried", lang)
+                : `${fu.correct}/${fu.total}`}
+            </div>
+            <div className="stat__label">{t("students.followUpScore", lang)}</div>
           </div>
         </div>
       </div>

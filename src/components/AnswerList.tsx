@@ -9,7 +9,7 @@ type QuestionDto = {
   textEn: string | null;
   options: OptionDto[];
 };
-export type AnswerListQuestion = QuestionDto & { followUps: QuestionDto[] };
+export type AnswerListQuestion = QuestionDto & { remediation: { id: string } | null; followUps: QuestionDto[] };
 export type AnswerListAnswer = { chosenLetter: string | null; isCorrect: boolean };
 
 const loc = (lang: Lang, fr: string, en: string | null) => (lang === "en" && en ? en : fr);
@@ -88,12 +88,21 @@ export function AnswerList({
     <div className="col" style={{ gap: 14 }}>
       {questions.map((q, idx) => {
         const answer = answers[q.id];
-        const followUps = q.followUps.filter((fu) => answers[fu.id]);
+        // Follow-ups show under a wrong answer that has a remediation; list
+        // every one the student was given, answered or not.
+        const offered = answer && !answer.isCorrect && q.remediation != null;
+        const followUps = q.followUps.filter((fu) => offered || answers[fu.id]);
+        const followUpsCorrect = followUps.filter((fu) => answers[fu.id]?.isCorrect).length;
         return (
           <div key={q.id} id={`q-${idx + 1}`} className="card" style={{ padding: 20, scrollMarginTop: 24 }}>
             <div className="row" style={{ gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
               <span className="badge badge--grade">Q{idx + 1}</span>
               <StatusBadge answer={answer} lang={lang} />
+              {followUps.length > 0 && (
+                <span className="badge badge--draft numeric">
+                  {t("students.followUpScore", lang)} {followUpsCorrect}/{followUps.length}
+                </span>
+              )}
               {q.skillTag && (
                 <span className="muted" style={{ fontSize: 12 }}>
                   {q.skillTag}

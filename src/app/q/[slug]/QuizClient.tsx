@@ -535,6 +535,22 @@ function ResultsView({
   // Conic ring fill proportional to score percentage.
   const ringDeg = Math.round((pct / 100) * 360);
 
+  // Follow-ups offered under the questions the student got wrong.
+  const offeredFollowUps = result.corrections.flatMap((c) => c.remediation?.followUps ?? []);
+  const followUpCorrect = offeredFollowUps.filter((fu) => followUpAnswers[fu.id] === fu.correctLetter).length;
+
+  // Follow-ups are answered after the submission exists, so each answer is
+  // saved on its own for the teacher's report.
+  function answerFollowUp(questionId: string, letter: string) {
+    setFollowUpAnswers({ ...followUpAnswers, [questionId]: letter });
+    fetch("/api/public/submit/followup", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ submissionId: result.submissionId, questionId, chosenLetter: letter }),
+      keepalive: true,
+    }).catch((e) => console.error("[follow-up]", e));
+  }
+
   return (
     <MathJax dynamic>
       {/* Score summary screen */}
@@ -603,6 +619,19 @@ function ResultsView({
               {t("student.toReview", lang)}
             </div>
           </div>
+          {offeredFollowUps.length > 0 && (
+            <>
+              <div className="vdivider" style={{ height: 40 }} />
+              <div style={{ textAlign: "center" }}>
+                <div className="numeric" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 28, color: "#fff" }}>
+                  {followUpCorrect}/{offeredFollowUps.length}
+                </div>
+                <div className="muted" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", marginTop: 4 }}>
+                  {t("student.followUpScore", lang)}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -789,7 +818,7 @@ function ResultsView({
                                   className={cls}
                                   style={answered ? { cursor: "default" } : undefined}
                                   onClick={() => {
-                                    if (!answered) setFollowUpAnswers({ ...followUpAnswers, [fu.id]: o.letter });
+                                    if (!answered) answerFollowUp(fu.id, o.letter);
                                   }}
                                 >
                                   <span className="quiz-option__letter">{o.letter}</span>

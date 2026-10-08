@@ -9,7 +9,7 @@ import { newSlug } from "@/lib/slug";
 // the manual JSON import uses — so the result drops straight into the import
 // preview/editor.
 
-const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
 
 export type GenerateInput = {
@@ -170,7 +170,7 @@ Questions are substantive, exam-grade items, not one-line trivia.
 - diagramSvg: only when a small diagram genuinely helps — an inline SVG string with viewBox="0 0 240 130", simple shapes, stroke="currentColor", no scripts or external references. null otherwise; most questions need none.
 - subtitleFr / subtitleEn on a part: a short description of the part, or null.
 
-Do not include videos or links of any kind.`;
+Do not include videos or links of any kind; they are added in a separate step.`;
 
 function userPrompt(input: GenerateInput): string {
   const lines = [

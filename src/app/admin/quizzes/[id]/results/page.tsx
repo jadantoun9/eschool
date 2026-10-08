@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLang } from "@/lib/lang";
 import { t } from "@/lib/i18n";
-import { studentKey } from "@/lib/students";
+import { answerWithQuestion, followUpLabel, followUpStats, studentKey } from "@/lib/students";
 import {
   SkillBreakdownRow,
   type BreakdownQuestion,
@@ -31,7 +31,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           options: { select: { letter: true, textFr: true, textEn: true, isCorrect: true } },
         },
       },
-      submissions: { orderBy: { submittedAt: "desc" }, include: { answers: true } },
+      submissions: { orderBy: { submittedAt: "desc" }, include: { answers: { include: answerWithQuestion } } },
     },
   });
   if (!quiz) notFound();
@@ -92,10 +92,17 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           }, 0) / submissionCount
         );
 
-  // KPI: completion rate (submissions that answered all questions)
+  // KPI: completion rate (submissions that answered all main questions)
   const completedCount = quiz.submissions.filter(
-    (sub) => sub.answers.length >= total
+    (sub) => sub.answers.filter((a) => !a.question.parentId).length >= total
   ).length;
+
+  // KPI: follow-up score, over the submissions where follow-ups were tried.
+  const fuStats = new Map(quiz.submissions.map((sub) => [sub.id, followUpStats(sub.answers)]));
+  const fuTried = [...fuStats.values()].filter((s) => s.total > 0 && s.answered > 0);
+  const fuCorrect = fuTried.reduce((n, s) => n + s.correct, 0);
+  const fuTotal = fuTried.reduce((n, s) => n + s.total, 0);
+  const fuPct = fuTotal === 0 ? null : Math.round((fuCorrect / fuTotal) * 100);
   const completionPct =
     submissionCount === 0 ? 0 : Math.round((completedCount / submissionCount) * 100);
 
@@ -250,6 +257,41 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
             {completionPct}
             <span style={{ fontSize: 28, color: "var(--text-muted)" }}>%</span>
           </div>
+        </div>
+
+        {/* Follow-up score */}
+        <div className="card" style={{ padding: "20px 22px" }} title={t("students.followUpScoreHint", lang)}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 14,
+            }}
+          >
+            {t("results.followUpScore", lang)}
+          </div>
+          <div
+            className="numeric"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: 46,
+              lineHeight: 1,
+              color: "#fff",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {fuPct == null ? "—" : fuPct}
+            {fuPct != null && <span style={{ fontSize: 28, color: "var(--text-muted)" }}>%</span>}
+          </div>
+          {fuPct != null && (
+            <div className="muted numeric" style={{ fontSize: 12, marginTop: 8 }}>
+              {fuCorrect}/{fuTotal}
+            </div>
+          )}
         </div>
 
         {/* Questions */}
@@ -540,6 +582,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
                 <th>{t("results.col.class", lang)}</th>
                 <th>{t("results.col.score", lang)}</th>
                 <th>{t("results.col.pct", lang)}</th>
+                <th title={t("students.followUpScoreHint", lang)}>{t("results.col.followUps", lang)}</th>
                 <th>{t("results.col.lang", lang)}</th>
                 <th>{t("results.col.date", lang)}</th>
               </tr>
@@ -560,6 +603,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
                     >
                       {pct}%
                     </td>
+                    <td className="numeric muted">{followUpLabel(fuStats.get(sub.id)!)}</td>
                     <td>
                       <span className="badge badge--draft">
                         {sub.language.toUpperCase()}

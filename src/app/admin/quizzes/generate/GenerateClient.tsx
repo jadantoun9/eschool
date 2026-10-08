@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
 import type { QuizImport } from "@/lib/quiz-import-schema";
+import type { QuestionLink } from "@/lib/ai-links";
 import { BackLink } from "@/components/BackLink";
 import { Spinner } from "@/components/Spinner";
 import ImportClient from "../import/ImportClient";
@@ -32,7 +33,7 @@ export default function GenerateClient({
   preSubjectId: string;
   preGradeId: string;
 }) {
-  const [stage, setStage] = useState<"form" | "generating" | "preview">("form");
+  const [stage, setStage] = useState<"form" | "generating" | "links" | "preview">("form");
   const [subjectId, setSubjectId] = useState(preSubjectId);
   const [gradeId, setGradeId] = useState(preGradeId);
   const [topic, setTopic] = useState("");
@@ -43,12 +44,14 @@ export default function GenerateClient({
   const [result, setResult] = useState<Generated | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [progress, setProgress] = useState<Progress | null>(null);
+  const [linksNote, setLinksNote] = useState<string | null>(null);
+  const linksAbort = useRef<AbortController | null>(null);
 
   const nameOf = (x: Option) => (lang === "fr" ? x.nameFr : x.nameEn);
   const canSubmit = subjectId && gradeId && topic.trim().length >= 3;
 
   useEffect(() => {
-    if (stage !== "generating") return;
+    if (stage !== "generating" && stage !== "links") return;
     setElapsed(0);
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(id);
@@ -62,6 +65,7 @@ export default function GenerateClient({
     setErr(null);
     setProgress(null);
     setStage("generating");
+    let done: Generated | null = null;
     try {
       const res = await fetch("/api/quizzes/generate", {
         method: "POST",
@@ -84,7 +88,6 @@ export default function GenerateClient({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let done: Generated | null = null;
       for (;;) {
         const { value, done: finished } = await reader.read();
         if (finished) break;
@@ -120,11 +123,53 @@ export default function GenerateClient({
       }
       if (!done) throw new Error(t("gen.error", lang));
       setResult(done);
-      setStage("preview");
     } catch (e) {
       setErr(`${t("gen.error", lang)}\n${(e as Error).message}`);
       setStage("form");
+      return;
     }
+    if (done) await addLinks(done);
+  }
+
+  // Second request: a video or interactive activity for each question. The
+  // worksheet is kept whatever happens here; links are a bonus.
+  async function addLinks(generated: Generated) {
+    setLinksNote(null);
+    setStage("links");
+    const ctrl = new AbortController();
+    linksAbort.current = ctrl;
+    try {
+      const res = await fetch("/api/quizzes/generate/links", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ data: generated.data }),
+        signal: ctrl.signal,
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      const links = (j.links ?? []) as QuestionLink[];
+      const data = structuredClone(generated.data);
+      for (const l of links) {
+        const q = data.parts[l.part]?.questions[l.question];
+        if (q) q.link = { url: l.url, labelFr: l.labelFr, labelEn: l.labelEn };
+      }
+      const total = data.parts.reduce((n, p) => n + p.questions.length, 0);
+      setResult({ ...generated, data });
+      setLinksNote(
+        links.length
+          ? t("gen.linksAdded", lang).replace("{n}", String(links.length)).replace("{total}", String(total))
+          : t("gen.linksNone", lang)
+      );
+    } catch (e) {
+      if (!ctrl.signal.aborted) setLinksNote(`${t("gen.linksFailed", lang)} ${(e as Error).message}`);
+    }
+    if (!ctrl.signal.aborted) setStage("preview");
+  }
+
+  function skipLinks() {
+    linksAbort.current?.abort();
+    setLinksNote(null);
+    setStage("preview");
   }
 
   if (stage === "preview" && result) {
@@ -140,6 +185,11 @@ export default function GenerateClient({
             </span>
           )}
         </div>
+        {linksNote && (
+          <div className="muted" style={{ fontSize: 13, marginTop: -8 }}>
+            {linksNote}
+          </div>
+        )}
         <ImportClient lang={lang} initialData={result.data} onStartOver={() => setStage("form")} />
       </div>
     );
@@ -168,6 +218,8 @@ export default function GenerateClient({
 
       {stage === "generating" ? (
         <GeneratingCard lang={lang} progress={progress} total={questionCount} elapsed={elapsed} />
+      ) : stage === "links" ? (
+        <LinksCard lang={lang} elapsed={elapsed} onSkip={skipLinks} />
       ) : (
         <div className="card" style={{ padding: 32 }}>
           <div className="grid grid--2">
@@ -380,6 +432,33 @@ function GeneratingCard({
       </div>
       <p className="dim" style={{ fontSize: 12, marginTop: 18 }}>
         {t("gen.generatingHint", lang)}
+      </p>
+    </div>
+  );
+}
+
+function LinksCard({ lang, elapsed, onSkip }: { lang: Lang; elapsed: number; onSkip: () => void }) {
+  return (
+    <div className="card" style={{ padding: "40px 32px" }}>
+      <div className="row" style={{ gap: 12, marginBottom: 6 }}>
+        <span style={{ display: "inline-flex", color: "var(--accent)" }}>
+          <Spinner size={22} />
+        </span>
+        <div className="h3">{t("gen.linksTitle", lang)}</div>
+      </div>
+      <p className="muted" style={{ marginBottom: 22 }}>
+        {t("gen.linksStatus", lang)}
+      </p>
+      <div className="row numeric dim" style={{ justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+        <span>
+          {t("gen.elapsed", lang)} {fmt(elapsed)}
+        </span>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onSkip}>
+          {t("gen.linksSkip", lang)} →
+        </button>
+      </div>
+      <p className="dim" style={{ fontSize: 12, marginTop: 18 }}>
+        {t("gen.linksHint", lang)}
       </p>
     </div>
   );
