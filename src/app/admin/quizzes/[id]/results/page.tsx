@@ -29,6 +29,16 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
           textFr: true,
           textEn: true,
           options: { select: { letter: true, textFr: true, textEn: true, isCorrect: true } },
+          remediation: { select: { id: true } },
+          followUps: {
+            orderBy: { order: "asc" },
+            select: {
+              id: true,
+              textFr: true,
+              textEn: true,
+              options: { select: { letter: true, textFr: true, textEn: true, isCorrect: true } },
+            },
+          },
         },
       },
       submissions: { orderBy: { submittedAt: "desc" }, include: { answers: { include: answerWithQuestion } } },
@@ -55,16 +65,27 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
       text: loc(q.textFr, q.textEn),
       options: Object.fromEntries(q.options.map((o) => [o.letter, loc(o.textFr, o.textEn)])),
       correctLetter: q.options.find((o) => o.isCorrect)?.letter ?? null,
+      // Students only see follow-ups under a wrong answer with a remediation.
+      followUps: q.remediation
+        ? q.followUps.map((fu) => ({
+            id: fu.id,
+            text: loc(fu.textFr, fu.textEn),
+            options: Object.fromEntries(fu.options.map((o) => [o.letter, loc(o.textFr, o.textEn)])),
+            correctLetter: fu.options.find((o) => o.isCorrect)?.letter ?? null,
+          }))
+        : [],
     });
     skillStats.set(q.skillTag, st);
   });
   for (const st of skillStats.values()) {
     const ids = new Set(st.questions.map((q) => q.id));
+    const followUpIds = new Set(st.questions.flatMap((q) => q.followUps.map((fu) => fu.id)));
     for (const sub of quiz.submissions) {
-      const relevant = sub.answers.filter((a) => ids.has(a.questionId));
-      if (relevant.length === 0) continue;
-      st.total += relevant.length;
-      st.correct += relevant.filter((a) => a.isCorrect).length;
+      const main = sub.answers.filter((a) => ids.has(a.questionId));
+      if (main.length === 0) continue;
+      st.total += main.length;
+      st.correct += main.filter((a) => a.isCorrect).length;
+      const relevant = sub.answers.filter((a) => ids.has(a.questionId) || followUpIds.has(a.questionId));
       st.students.push({
         submissionId: sub.id,
         studentKey: studentKey(sub.studentName, sub.studentClass),
@@ -540,6 +561,9 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
                 overall: t("results.breakdown.overall", lang),
                 correct: t("results.breakdown.correct", lang),
                 chose: t("results.breakdown.chose", lang),
+                followUp: t("results.breakdown.followUp", lang),
+                followUpTried: t("results.breakdown.followUpTried", lang),
+                notAttempted: t("results.breakdown.notAttempted", lang),
                 hint: t("results.breakdownHint", lang),
               }}
             />
