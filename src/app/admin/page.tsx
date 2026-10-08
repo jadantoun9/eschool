@@ -92,21 +92,6 @@ export default async function AdminDashboard() {
         }}
       >
         <div className="spacer" style={{ flex: 1 }} />
-        <Link href="/admin/quizzes/import" className="btn btn--ghost btn--sm">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M8 12V3M8 3L4 7M8 3l4 4M3 14h10" />
-          </svg>
-          {t("adminDash.importJson", lang)}
-        </Link>
         <Link href="/admin/quizzes/new" className="btn btn--primary btn--sm">
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
           {t("adminDash.newQuiz", lang)}

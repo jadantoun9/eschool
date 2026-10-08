@@ -11,7 +11,7 @@ import { newSlug } from "@/lib/slug";
 // preview/editor.
 
 export const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
+export const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
 
 export type GenerateInput = {
   subject: { slug: string; nameFr: string; nameEn: string };
@@ -208,7 +208,8 @@ Questions are substantive, exam-grade items, not one-line trivia.
 
 ${CHALLENGE_RULES}
 
-Do not include videos or links of any kind; they are added in a separate step.`;
+## Videos and activities
+Never create, generate, script or describe videos, animations or interactive activities, and never write a URL. Do not include videos or links of any kind. A separate step browses the web for existing videos and interactive lessons that match each question and inserts them.`;
 
 function userPrompt(input: GenerateInput): string {
   const lines = [
@@ -359,7 +360,10 @@ function assemble(raw: unknown, input: GenerateInput): QuizImport {
   return parsed.data;
 }
 
-function describeError(err: unknown): string {
+export function describeError(err: unknown): string {
+  if (err instanceof Anthropic.AuthenticationError || err instanceof OpenAI.AuthenticationError) {
+    return "API key is missing or invalid";
+  }
   if (err instanceof Anthropic.APIError || err instanceof OpenAI.APIError) {
     return `API error ${err.status ?? ""}: ${err.message}`.trim();
   }
